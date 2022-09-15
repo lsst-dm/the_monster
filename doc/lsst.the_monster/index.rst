@@ -1,16 +1,16 @@
-.. py:currentmodule:: lsst.the.monster
+.. py:currentmodule:: lsst.the_monster
 
-.. _lsst.the.monster:
+.. _lsst.the_monster:
 
 ################
-lsst.the.monster
+lsst.the_monster
 ################
 
 .. Paragraph that describes what this Python module does and links to related modules and frameworks.
 
-.. .. _lsst.the.monster-using:
+.. .. _lsst.the_monster-using:
 
-.. Using lsst.the.monster
+.. Using lsst.the_monster
 .. ======================
 
 .. toctree linking to topics related to using the module's APIs.
@@ -18,12 +18,12 @@ lsst.the.monster
 .. .. toctree::
 ..    :maxdepth: 1
 
-.. _lsst.the.monster-contributing:
+.. _lsst.the_monster-contributing:
 
 Contributing
 ============
 
-``lsst.the.monster`` is developed at https://github.com/lsst-dm/the_monster.
+``lsst.the_monster`` is developed at https://github.com/lsst-dm/the_monster.
 You can find Jira issues for this module under the `the_monster <https://jira.lsstcorp.org/issues/?jql=project%20%3D%20DM%20AND%20component%20%3D%20the_monster>`_ component.
 
 .. If there are topics related to developing this module (rather than using it), link to this from a toctree placed here.
@@ -31,7 +31,7 @@ You can find Jira issues for this module under the `the_monster <https://jira.ls
 .. .. toctree::
 ..    :maxdepth: 1
 
-.. .. _lsst.the.monster-scripts:
+.. .. _lsst.the_monster-scripts:
 
 .. Script reference
 .. ================
@@ -41,11 +41,11 @@ You can find Jira issues for this module under the `the_monster <https://jira.ls
 .. .. toctree::
 ..    :maxdepth: 1
 
-.. .. _lsst.the.monster-pyapi:
+.. .. _lsst.the_monster-pyapi:
 
 Python API reference
 ====================
 
-.. automodapi:: lsst.the.monster
+.. automodapi:: lsst.the_monster
    :no-main-docstr:
    :no-inheritance-diagram:

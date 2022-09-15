@@ -9,4 +9,4 @@ the_monster documentation preview
 .. toctree::
    :maxdepth: 1
 
-   lsst.the.monster/index
+   lsst.the_monster/index
