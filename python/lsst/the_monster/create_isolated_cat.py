@@ -1,7 +1,5 @@
 import numpy as np
-from glob import glob
 import fitsio
-import pandas as pd
 import os
 from smatch.matcher import Matcher
 import warnings
@@ -12,8 +10,9 @@ from lsst.pipe.tasks.isolatedStarAssociation import IsolatedStarAssociationTask
 import lsst.pex.config as pexConfig
 
 # I think I want to create seperate folders for each catalog and have a yaml
-# file in the super directory that specifies what columns to use for each catalog
-class refCatMatchConfig(pexConfig.Config):
+# file in the super directory that specifies what columns to use for each 
+# catalog.
+class RefCatMatchConfig(pexConfig.Config):
     """Configuration for IsolatedStarAssociationTask."""
 
     path = pexConfig.Field(
@@ -83,13 +82,13 @@ class CreateAndMatchIsolatedGaiaCatConfig(pexConfig.Config):
     )
     primary_catalog_config = pexConfig.ConfigField(
         doc="config for primary catalog to create isolated cata and match with other catalogs",
-        dtype=refCatMatchConfig,
+        dtype=RefCatMatchConfig,
         default=None,
     )
     matched_catalog_configs = pexConfig.ConfigDictField(
         doc="A dict of configs describing the catalogs to match with the isolated gaia catalog.",
         keytype=str,
-        itemtype=refCatMatchConfig,
+        itemtype=RefCatMatchConfig,
         default={},
     )
     primary_force = pexConfig.Field(
@@ -130,7 +129,8 @@ class CreateAndMatchIsolatedGaiaCat:
         isaTask.config.ra_column = cat_config.ra_column
         isaTask.config.dec_column = cat_config.dec_column
         return isaTask._remove_neighbors(catalog)
-
+    def _find_catalogs(self):
+        if os.path
     def _read_catalog(self, htmid, cat_config):
         catalog_loader = ReadFitsCatalogTask()
         catalog_loader.config.column_map = cat_config.column_map
@@ -150,7 +150,7 @@ class CreateAndMatchIsolatedGaiaCat:
             + "_primary/"
         )
         write_path += f"{self.config.primary_catalog_config.catalog_name}_{htmid}.fits"
-        if ~os.path.exists(write_path) | (self.config.primary_force == True):
+        if ~os.path.exists(write_path) | (self.config.primary_force is True):
             primary_cat = self._read_catalog(htmid, self.config.primary_catalog_config)
             primary_isolated_cat = self._remove_neighbors(
                 primary_cat, self.config.primary_catalog_config
