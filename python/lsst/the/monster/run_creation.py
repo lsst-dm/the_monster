@@ -1,5 +1,6 @@
 from create_isolated_cat import *
 from random import sample
+from glob import glob
 
 if __name__ == "__main__":
     config = CreateAndMatchIsolatedGaiaCat.ConfigClass()

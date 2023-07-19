@@ -129,8 +129,8 @@ class CreateAndMatchIsolatedGaiaCat:
         isaTask.config.ra_column = cat_config.ra_column
         isaTask.config.dec_column = cat_config.dec_column
         return isaTask._remove_neighbors(catalog)
-    def _find_catalogs(self):
-        if os.path
+#    def _find_catalogs(self):
+#        if os.path
     def _read_catalog(self, htmid, cat_config):
         catalog_loader = ReadFitsCatalogTask()
         catalog_loader.config.column_map = cat_config.column_map
