@@ -188,6 +188,9 @@ class CreateAndMatchIsolatedGaiaCat:
                 matched_cat["primary_id"] = primary_isolated_cat[
                     self.config.primary_catalog_config.id_column
                 ][i1[sel]].filled()
+                # Is this where we would want to call transform_photom? That should
+                # take matched_catalog_configs.catalog_name as in input and 
+                # return a catalog with the transformed fluxes as added columns.
                 write_path = self.config.out_path + cat_config.catalog_name + "/"
                 write_path += f"{cat_config.catalog_name}_{htmid}.fits"
                 fitsio.write(write_path, matched_cat, clobber=True)
