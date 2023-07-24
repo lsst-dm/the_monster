@@ -32,9 +32,17 @@ def get_transform(inp_id=None):
     transform_coeffs: `array` of `floats`
         Transformation coefficients used to convert to DESY6 system.
     '''
-    inp_file = 'transform_to_DESY6_coeffs.csv'
+    ## Open the file for reading
+    inp_file = 'transform_coeffs.json'
+    with open(inp_file, "r") as fp:
+        # Load the dictionary from the file
+        dict_coeffs = json.load(fp)
+
+    # I don't think the dict approach works. Wait to see what format Eli
+    # persists things in...
+ 
     # Need to figure out how to identify which entry to select from inp file.
-    cat_coeffs = ascii.read(inp_file)
+    # cat_coeffs = ascii.read(inp_file)
     # Need to loop over bands (and select separate bands from table).
     return cat_coeffs
 
