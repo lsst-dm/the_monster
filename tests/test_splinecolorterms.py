@@ -1,11 +1,13 @@
+import os
 import unittest
 import numpy as np
 import astropy.units as units
 from scipy.stats import median_abs_deviation
+import tempfile
 
 import lsst.utils
 
-from lsst.the.monster import ColortermSplineFitter
+from lsst.the.monster import ColortermSplineFitter, ColortermSpline
 
 
 class MonsterColortermSplineFitterTest(lsst.utils.tests.TestCase):
@@ -44,7 +46,6 @@ class MonsterColortermSplineFitterTest(lsst.utils.tests.TestCase):
         mag_meas_scatter = mag_meas + np.random.normal(loc=0.0, scale=0.02, size=n_star) + mag_offset
 
         # Add a couple of large outliers
-        outlier_indices = np.hstack((np.arange(10), np.arange(10) + 100))
         mag_ref_scatter[0: 10] = 50.0
         mag_meas_scatter[100: 110] = 50.0
         non_outliers = np.ones(n_star, dtype=bool)
@@ -101,6 +102,114 @@ class MonsterColortermSplineFitterTest(lsst.utils.tests.TestCase):
     def test_splinefitter_fluxoffset(self):
         np.random.seed(4321)
         self.check_splinefitter(mag_offset=0.3, check_pars=False)
+
+
+class MonsterColortermSplineTest(lsst.utils.tests.TestCase):
+    def setUp(self):
+        self._source_survey = "Survey1"
+        self._target_survey = "Survey2"
+        self._source_color_field_1 = "flux_g"
+        self._source_color_field_2 = "flux_i"
+        self._source_field = "flux_r"
+        self._nodes = np.linspace(0.5, 3.5, 10)
+        self._values = np.ones(10)
+        self._values[4: 6] = 1.1
+        self._flux_offset = 1.0
+
+    def test_spline_apply(self):
+        spline = ColortermSpline(
+            self._source_survey,
+            self._target_survey,
+            self._source_color_field_1,
+            self._source_color_field_2,
+            self._source_field,
+            self._nodes,
+            self._values,
+            flux_offset=self._flux_offset,
+        )
+
+        n_star = 20_000
+
+        colors = np.random.uniform(0.5, 3.5, n_star)
+
+        flux_1 = np.ones(n_star)
+        mag_1 = (flux_1*units.nJy).to_value(units.ABmag)
+        mag_2 = mag_1 - colors
+        flux_2 = (mag_2*units.ABmag).to_value(units.nJy)
+
+        flux_source = np.zeros(n_star) + 10000.0
+
+        model_flux = spline.apply(flux_1, flux_2, flux_source)
+
+        # And compare directly.
+        spl = lsst.afw.math.makeInterpolate(
+            self._nodes,
+            self._values,
+            lsst.afw.math.stringToInterpStyle("CUBIC_SPLINE"),
+        )
+        model = spl.interpolate(colors)
+        model -= self._flux_offset/flux_source
+
+        np.testing.assert_array_almost_equal(model_flux, model)
+
+    def test_spline_serialize(self):
+        spline = ColortermSpline(
+            self._source_survey,
+            self._target_survey,
+            self._source_color_field_1,
+            self._source_color_field_2,
+            self._source_field,
+            self._nodes,
+            self._values,
+            flux_offset=self._flux_offset,
+        )
+
+        self.assertEqual(spline.source_survey, self._source_survey)
+        self.assertEqual(spline.target_survey, self._target_survey)
+        self.assertEqual(spline.source_color_field_1, self._source_color_field_1)
+        self.assertEqual(spline.source_color_field_2, self._source_color_field_2)
+        self.assertEqual(spline.source_field, self._source_field)
+        np.testing.assert_array_almost_equal(spline.nodes, self._nodes)
+        np.testing.assert_array_almost_equal(spline.spline_values, self._values)
+        self.assertEqual(spline.flux_offset, self._flux_offset)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            filename = os.path.join(temp_dir, "test.yaml")
+
+            spline.save(filename)
+
+            spline2 = ColortermSpline.load(filename)
+
+        self.assertEqual(spline2.source_survey, spline.source_survey)
+        self.assertEqual(spline2.target_survey, spline.target_survey)
+        self.assertEqual(spline2.source_color_field_1, spline.source_color_field_1)
+        self.assertEqual(spline2.source_color_field_2, spline.source_color_field_2)
+        self.assertEqual(spline2.source_field, spline.source_field)
+        np.testing.assert_array_almost_equal(spline2.nodes, spline.nodes)
+        np.testing.assert_array_almost_equal(spline2.spline_values, spline.spline_values)
+        self.assertEqual(spline2.flux_offset, spline.flux_offset)
+
+    def test_spline_overwrite(self):
+        spline = ColortermSpline(
+            self._source_survey,
+            self._target_survey,
+            self._source_color_field_1,
+            self._source_color_field_2,
+            self._source_field,
+            self._nodes,
+            self._values,
+            flux_offset=self._flux_offset,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            filename = os.path.join(temp_dir, "test.yaml")
+
+            spline.save(filename)
+
+            with self.assertRaises(OSError):
+                spline.save(filename)
+
+            spline.save(filename, overwrite=True)
 
 
 class TestMemory(lsst.utils.tests.MemoryTestCase):

@@ -1,10 +1,13 @@
+import os
 import numpy as np
 import scipy.optimize
+from astropy import units
+import yaml
 
 import lsst.afw.math
 
 
-__all__ = ["ColortermSplineFitter",]
+__all__ = ["ColortermSplineFitter", "ColortermSpline"]
 
 
 class ColortermSplineFitter:
@@ -204,3 +207,133 @@ class ColortermSplineFitter:
         t = np.sum(absdev.astype(np.float64))
 
         return t
+
+
+class ColortermSpline:
+    """Save, load, and apply spline color terms.
+
+    Parameters
+    ----------
+    source_survey : `str`
+        Name of the source survey (e.g. ``ps1``).
+    target_survey : `str`
+        Name of the target survey (e.g. ``des``).
+    source_color_field_1 : `str`
+        Name of first flux field for colors in source survey.
+    source_color_field_2 : `str`
+        Name of second flux field for colors in source survey.
+    source_field : `str`
+        Name of flux field to convert to target survey.
+    nodes : `np.ndarray` (N,)
+        Array of spline nodes.
+    spline_values : `np.ndarray` (N,)
+        Array of spline values.
+    flux_offset : `float`, optional
+        Flux offset to apply in conversion.
+    """
+    def __init__(
+            self,
+            source_survey,
+            target_survey,
+            source_color_field_1,
+            source_color_field_2,
+            source_field,
+            nodes,
+            spline_values,
+            flux_offset=0.0,
+    ):
+        self.source_survey = source_survey
+        self.target_survey = target_survey
+        self.source_color_field_1 = source_color_field_1
+        self.source_color_field_2 = source_color_field_2
+        self.source_field = source_field
+        self.nodes = np.array(nodes)
+        self.spline_values = np.array(spline_values)
+        self.flux_offset = flux_offset
+
+        self._spl = lsst.afw.math.makeInterpolate(
+            self.nodes,
+            self.spline_values,
+            lsst.afw.math.stringToInterpStyle("CUBIC_SPLINE"),
+        )
+
+    def save(self, yaml_file, overwrite=False):
+        """Serialize to a yaml file.
+
+        Parameters
+        ----------
+        yaml_file : `str`
+            Name of yaml file for output.
+        overwrite : `bool`, optional
+            Overwrite file if it exists?
+        """
+        yaml_dict = {
+            "source_survey": str(self.source_survey),
+            "target_survey": str(self.target_survey),
+            "source_color_field_1": str(self.source_color_field_1),
+            "source_color_field_2": str(self.source_color_field_2),
+            "source_field": str(self.source_field),
+            "nodes": [float(val) for val in self.nodes],
+            "spline_values": [float(val) for val in self.spline_values],
+            "flux_offset": float(self.flux_offset),
+        }
+
+        serialized = yaml.safe_dump(yaml_dict)
+
+        if os.path.isfile(yaml_file):
+            if not overwrite:
+                raise OSError(f"{yaml_file} already exists, and overwrite=False.")
+            os.remove(yaml_file)
+
+        with open(yaml_file, "w") as fd:
+            fd.write(serialized)
+
+    @classmethod
+    def load(cls, yaml_file):
+        """Load from a yaml file.
+
+        Parameters
+        ----------
+        yaml_file : `str`
+            Name of yaml file for input.
+        """
+        with open(yaml_file, "rb") as fd:
+            data = yaml.safe_load(fd)
+
+        return cls(
+            data["source_survey"],
+            data["target_survey"],
+            data["source_color_field_1"],
+            data["source_color_field_2"],
+            data["source_field"],
+            data["nodes"],
+            data["spline_values"],
+            flux_offset=data["flux_offset"],
+        )
+
+    def apply(self, source_color_flux_1, source_color_flux_2, source_flux):
+        """Apply the color term spline model.
+
+        Parameters
+        ----------
+        source_color_flux_1 : `np.ndarray` (N,)
+            Array of source fluxes used for color (1).
+        source_color_flux_2 : `np.ndarray` (N,)
+            Array of source fluxes used for color (2).
+        source_flux : `np.ndarray` (N,)
+            Array of source fluxes to convert.
+
+        Returns
+        -------
+        target_flux : `np.ndarray` (N,)
+            Array of fluxes converted to target.
+        """
+        mag_1 = (source_color_flux_1*units.nJy).to_value(units.ABmag)
+        mag_2 = (source_color_flux_2*units.nJy).to_value(units.ABmag)
+
+        mag_color = mag_1 - mag_2
+
+        model = self._spl.interpolate(mag_color)
+        model -= self.flux_offset/source_flux
+
+        return model
