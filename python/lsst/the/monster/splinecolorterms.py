@@ -251,7 +251,7 @@ class ColortermSpline:
         self.spline_values = np.array(spline_values)
         self.flux_offset = flux_offset
 
-        self._spl = lsst.afw.math.makeInterpolate(
+        self.spline = lsst.afw.math.makeInterpolate(
             self.nodes,
             self.spline_values,
             lsst.afw.math.stringToInterpStyle("CUBIC_SPLINE"),
@@ -328,12 +328,16 @@ class ColortermSpline:
         target_flux : `np.ndarray` (N,)
             Array of fluxes converted to target.
         """
-        mag_1 = (source_color_flux_1*units.nJy).to_value(units.ABmag)
-        mag_2 = (source_color_flux_2*units.nJy).to_value(units.ABmag)
+        mag_1 = (np.array(source_color_flux_1)*units.nJy).to_value(units.ABmag)
+        mag_2 = (np.array(source_color_flux_2)*units.nJy).to_value(units.ABmag)
 
         mag_color = mag_1 - mag_2
 
-        model = self._spl.interpolate(mag_color)
+        model = self.spline.interpolate(mag_color)
         model -= self.flux_offset/source_flux
+
+        # Check that things are in range.
+        bad = ((mag_color < self.nodes[0]) & (mag_color > self.nodes[-1]))
+        model[bad] = np.nan
 
         return model
