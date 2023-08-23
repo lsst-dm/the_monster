@@ -337,7 +337,7 @@ class ColortermSpline:
         model -= self.flux_offset/source_flux
 
         # Check that things are in range.
-        bad = ((mag_color < self.nodes[0]) & (mag_color > self.nodes[-1]))
+        bad = ((mag_color < self.nodes[0]) | (mag_color > self.nodes[-1]))
         model[bad] = np.nan
 
         return model

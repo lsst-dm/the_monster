@@ -117,6 +117,8 @@ class MonsterColortermSplineTest(lsst.utils.tests.TestCase):
         self._flux_offset = 1.0
 
     def test_spline_apply(self):
+        np.random.seed(12345)
+
         spline = ColortermSpline(
             self._source_survey,
             self._target_survey,
@@ -151,6 +153,39 @@ class MonsterColortermSplineTest(lsst.utils.tests.TestCase):
         model -= self._flux_offset/flux_source
 
         np.testing.assert_array_almost_equal(model_flux, model)
+
+    def test_spline_apply_out_of_bounds(self):
+        np.random.seed(12345)
+
+        spline = ColortermSpline(
+            self._source_survey,
+            self._target_survey,
+            self._source_color_field_1,
+            self._source_color_field_2,
+            self._source_field,
+            self._nodes,
+            self._values,
+            flux_offset=self._flux_offset,
+        )
+
+        n_star = 1_000
+        colors = np.zeros(n_star)
+        colors[0: n_star // 2] = np.random.uniform(0.0, 0.6, n_star // 2)
+        colors[n_star // 2:] = np.random.uniform(3.4, 4.0, n_star // 2)
+
+        flux_1 = np.ones(n_star)
+        mag_1 = (flux_1*units.nJy).to_value(units.ABmag)
+        mag_2 = mag_1 - colors
+        flux_2 = (mag_2*units.ABmag).to_value(units.nJy)
+
+        flux_source = np.zeros(n_star) + 10000.0
+
+        model_flux = spline.apply(flux_1, flux_2, flux_source)
+
+        out_of_bounds = ((colors < 0.5) | (colors > 3.5))
+
+        np.testing.assert_array_equal(np.isfinite(model_flux[out_of_bounds]), False)
+        np.testing.assert_array_equal(np.isfinite(model_flux[~out_of_bounds]), True)
 
     def test_spline_serialize(self):
         spline = ColortermSpline(
