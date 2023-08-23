@@ -4,4 +4,4 @@ from lsst.the.monster import VSTSplineMeasurer
 
 
 measurer = VSTSplineMeasurer()
-measurer.measure_spline_fit()
+measurer.measure_spline_fit(bands=["g", "r", "i", "z"])
