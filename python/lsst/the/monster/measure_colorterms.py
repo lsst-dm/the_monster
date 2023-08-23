@@ -1,15 +1,13 @@
-import os
 import numpy as np
 import matplotlib.pyplot as plt
 from smatch import Matcher
-from astropy import units
 import warnings
 
-from lsst.afw.table import SimpleCatalog
 from lsst.sphgeom import Box, HtmPixelization
 
 from .splinecolorterms import ColortermSplineFitter, ColortermSpline
 from .refcats import GaiaXPInfo, GaiaDR3Info, DESInfo, SkyMapperInfo, PS1Info, VSTInfo
+from .utils import read_stars
 
 
 __all__ = [
@@ -46,44 +44,6 @@ class SplineMeasurer:
         """
         return (45.0, 55.0, -30.0, -20.0)
 
-    def read_stars(self, path, indices, allow_missing=False):
-        """Read stars from a sharded catalog.
-
-        Parameters
-        ----------
-        path : `str`
-            Path to sharded catalog.
-        indices : `list` [`int`]
-            List of pixel indices.
-        allow_missing : `bool`, optional
-            Allow missing pixels?  Used for testing.
-
-        Returns
-        -------
-        catalog : `astropy.Table`
-            Astropy table catalog.
-        """
-        stars = None
-        for index in indices:
-            try:
-                temp = SimpleCatalog.readFits(os.path.join(path, str(index) + ".fits"))
-            except RuntimeError as e:
-                if allow_missing:
-                    continue
-                else:
-                    raise e
-            if stars is None:
-                stars = temp
-            else:
-                stars.extend(temp)
-
-        stars = stars.copy(deep=True).asAstropy()
-
-        stars["coord_ra"].convert_unit_to(units.degree)
-        stars["coord_dec"].convert_unit_to(units.degree)
-
-        return stars
-
     def measure_spline_fit(self, bands=["g", "r", "i", "z", "y"], do_plots=True, overwrite=False):
         """Measure the spline fit, and save to a yaml file.
 
@@ -115,7 +75,7 @@ class SplineMeasurer:
         des_info = self.TargetCatInfoClass()
 
         # Read in all the DES stars in the region.
-        des_stars = self.read_stars(des_info.path, indices, allow_missing=self.testing_mode)
+        des_stars = read_stars(des_info.path, indices, allow_missing=self.testing_mode)
 
         # Cut to the good stars; use i-band as general reference.
         selected = des_info.select_stars(des_stars, "i")
@@ -124,7 +84,7 @@ class SplineMeasurer:
         # Read in the Gaia stars in the region.
         gaia_info = self.GaiaCatInfoClass()
 
-        gaia_stars = self.read_stars(gaia_info.path, indices, allow_missing=self.testing_mode)
+        gaia_stars = read_stars(gaia_info.path, indices, allow_missing=self.testing_mode)
 
         # Match these together.
         with Matcher(des_stars["coord_ra"], des_stars["coord_dec"]) as m:
@@ -141,7 +101,7 @@ class SplineMeasurer:
         # cat_info = self.get_cat_info()
         cat_info = self.CatInfoClass()
 
-        cat_stars = self.read_stars(cat_info.path, indices, allow_missing=self.testing_mode)
+        cat_stars = read_stars(cat_info.path, indices, allow_missing=self.testing_mode)
 
         with Matcher(des_stars["coord_ra"], des_stars["coord_dec"]) as m:
             idx, i1, i2, d = m.query_knn(
