@@ -169,7 +169,7 @@ class SplineMeasurer:
                 ratio_extent = np.percentile(flux_cat[selected]/flux_des[selected], [0.5, 99.5])
 
                 xlabel = f"{band_1} - {band_2}"
-                ylabel = f"{cat_info.name}_{band}/{des_info.name}_band"
+                ylabel = f"{cat_info.name}_{band}/{des_info.name}_{band}"
 
                 xvals = np.linspace(color_range[0], color_range[1], 1000)
                 yvals = colorterm.spline.interpolate(xvals)
@@ -199,7 +199,7 @@ class SplineMeasurer:
 
                 resid_extent = np.percentile(resid, [0.5, 99.5])
 
-                xlabel2 = f"log10({cat_info.name} band)"
+                xlabel2 = f"log10({cat_info.name} {band})"
 
                 flux_extent = np.percentile(np.log10(flux_des[selected]), [0.5, 99.5])
 
