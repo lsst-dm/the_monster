@@ -94,8 +94,9 @@ class MatchAndTransform:
                     # read in spline
                     # yaml spline fits are per-band, so put in loop over bands
                     filename = '../../../../colorterms/'+cat_info().name+'_to_DES_band_'+str(band)+'.yaml'
+                    # Fix the path above to be relative to the_monster package root
+                    # Some surveys don't have all bands, so check whether the YAML exists:
                     if os.path.isfile(filename):
-                        # Fix the path above to be relative to the_monster package root
                         colorterm_spline = ColortermSpline.load(filename)
 
                         # apply colorterms to transform to des mag
