@@ -50,17 +50,14 @@ class MatchAndTransform:
     htmid : `int`
         htm level 7 id of catalog(s).
     """
-    GaiaXPCatInfoClass = GaiaXPInfo
+    GaiaDR3CatInfoClass = GaiaDR3Info
     testing_mode = False
 
     def run(self, htmid=None, catalog_list=[GaiaXPInfo, SkyMapperInfo, PS1Info, VSTInfo]):
         
-        # Could make this a kwarg:
-        input_cat_path = '/sdf/data/rubin/shared/the_monster/sharded_refcats/gaia_xp_ps_des_sdss_sm_20221216/'
-        
         # read in gaiaDR3 cat htmid
         # Read in the Gaia stars in the htmid.
-        gaia_info = self.GaiaXPCatInfoClass()
+        gaia_info = self.GaiaDR3CatInfoClass()
 
         gaia_stars_all = read_stars(gaia_info.path, [htmid], allow_missing=self.testing_mode)
 
@@ -89,39 +86,36 @@ class MatchAndTransform:
                     )
                 cat_stars = cat_stars[i2]
 
-                # for band in cat_info.bands: # I don't think cat_infos have "bands"
-                for band in ['g', 'r', 'i', 'z', 'y']:
+                for band in cat_info.bands:
+                    # yaml spline fits are per-band, so loop over bands
                     # read in spline
-                    # yaml spline fits are per-band, so put in loop over bands
                     filename = '../../../../colorterms/'+cat_info().name+'_to_DES_band_'+str(band)+'.yaml'
                     # Fix the path above to be relative to the_monster package root
-                    # Some surveys don't have all bands, so check whether the YAML exists:
-                    if os.path.isfile(filename):
-                        colorterm_spline = ColortermSpline.load(filename)
 
-                        # apply colorterms to transform to des mag
-                        band_1, band_2 = cat_info().get_color_bands(band)
-                        model = colorterm_spline.apply(
-                                cat_stars[cat_info().get_flux_field(band_1)],
-                                cat_stars[cat_info().get_flux_field(band_2)],
-                                cat_stars[cat_info().get_flux_field(band)],
-                            )
-                        # Append the modeled mags column to cat_stars
-                        cat_stars.add_column(model, name=cat_info().name+'_'+model.name)
+                    colorterm_spline = ColortermSpline.load(filename)
+
+                    # apply colorterms to transform to des mag
+                    band_1, band_2 = cat_info().get_color_bands(band)
+                    model = colorterm_spline.apply(
+                            cat_stars[cat_info().get_flux_field(band_1)],
+                            cat_stars[cat_info().get_flux_field(band_2)],
+                            cat_stars[cat_info().get_flux_field(band)],
+                        )
+                    # Append the modeled mags column to cat_stars
+                    cat_stars.add_column(model, name=cat_info().name+'_'+model.name)
                 
                 write_path = 'tmp/'+cat_outdir
                 # write_path = cat_info().path+'/'+cat_outdir+'/'
                 if os.path.exists(write_path)==False:
                     os.makedirs(write_path)
                 write_path += f"/{htmid}.fits"
-                # Should probably use fitsio instead of Table.write?
+                # Save the shard to FITS. Should probably use fitsio instead of Table.write?
                 cat_stars.write(write_path, overwrite=True)
 
             else:
                 print(cat_info().path+'/'+str(htmid)+'.fits does not exist.')
 
-        import pdb; pdb.set_trace()
-        #save shard
+        # import pdb; pdb.set_trace()
 
     def _remove_neighbors(self, catalog):
         isaTask = IsolatedStarAssociationTask()
