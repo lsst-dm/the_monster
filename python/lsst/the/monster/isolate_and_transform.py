@@ -10,31 +10,16 @@ from lsst.the.monster.utils import read_stars
 __all__ = ["MatchAndTransform"]
 
 """
-read in gaia shard
-run isolated on gaia shard
-read in each catalog
-match with gaiadr3
-for each band, interpolate DES magnitudes
-Make sure interpolation behaves as expected (nan) outside range
-save catalog shard
+This Python script takes a sharded catalog and outputs a shard transformed to
+DES bandpasses.
 
-
-Question: current utils.read_stars takes a list of htm ids and reads in
-large catalogs. Do we pass 1 pixel at a time?
-
-could use this to get htmids
- ra_min, ra_max, dec_min, dec_max = self.ra_dec_range
-
-        box = Box.fromDegrees(ra_min, dec_min, ra_max, dec_max)
-
-        pixelization = HtmPixelization(7)
-        rs = pixelization.envelope(box)
-
-for filepaths and other config try to use:
-class GaiaXPSplineMeasurer(SplineMeasurer):
-    CatInfoClass = GaiaXPInfo
-
-
+The following steps are performed:
+1. Read in the Gaia shard.
+2. Run the IsolatedStarAssociationTask on the Gaia shard.
+3. Read in each catalog.
+4. Match each catalog with the Gaia DR3 catalog.
+5. For each band, interpolate the DES magnitudes.
+6. Save the catalog shard.
 """
 
 
@@ -50,7 +35,11 @@ class MatchAndTransform:
     GaiaDR3CatInfoClass = GaiaDR3Info
     testing_mode = False
 
-    def run(self, htmid=None, catalog_list=[GaiaXPInfo, SkyMapperInfo, PS1Info, VSTInfo]):
+    def run(self, 
+            htmid=None, 
+            catalog_list=[GaiaXPInfo, SkyMapperInfo, PS1Info, VSTInfo],
+            write_path=None
+    ):
 
         # read in gaiaDR3 cat htmid
         # Read in the Gaia stars in the htmid.
@@ -64,9 +53,6 @@ class MatchAndTransform:
         )
         # loop over other catalogs
         for cat_info in catalog_list:
-            # Create an output directory name for the shards:
-            cat_outdir = cat_info().name+'_transformed'
-
             # catalog_list should be a list of
             # cat_info = self.CatInfoClass() e.g. gaia cat
             # read in star cat (if it exists)
@@ -82,12 +68,14 @@ class MatchAndTransform:
                         return_indices=True,
                     )
                 cat_stars = cat_stars[i2]
+                cat_stars.add_column(gaia_stars["id"][i1], name=gaia_info.name + "_id")
 
                 for band in cat_info.bands:
                     # yaml spline fits are per-band, so loop over bands
                     # read in spline
-                    filename = '../../../../colorterms/'+cat_info().name+'_to_DES_band_'+str(band)+'.yaml'
-                    # Fix above path to be relative to the_monster package root
+                    filename = os.path.abspath(os.path.dirname(__file__))[:-23]
+                    filename += 'colorterms/'+cat_info().name
+                    filename += '_to_DES_band_'+str(band)+'.yaml'
 
                     colorterm_spline = ColortermSpline.load(filename)
 
@@ -99,24 +87,35 @@ class MatchAndTransform:
                         cat_stars[cat_info().get_flux_field(band)],
                     )
                     # Append the modeled mags column to cat_stars
-                    cat_stars.add_column(model, name=cat_info().name+'_'+model.name)
+                    cat_stars.add_column(model, name=f"decam_{band}_flux_from_{cat_info().name}")
+                if write_path is None:
+                   write_path = cat_info().path + '_transformed/'
 
-                write_path = 'tmp/'+cat_outdir
-                # write_path = cat_info().path+'/'+cat_outdir+'/'
                 if os.path.exists(write_path) is False:
                     os.makedirs(write_path)
                 write_path += f"/{htmid}.fits"
                 # Save the shard to FITS.
-                # Should probably use fitsio instead of Table.write?
                 cat_stars.write(write_path, overwrite=True)
 
             else:
                 print(cat_info().path+'/'+str(htmid)+'.fits does not exist.')
 
-        # import pdb; pdb.set_trace()
-
     def _remove_neighbors(self, catalog):
+        """Removes neighbors from a catalog.
+
+        Args:
+            catalog (pandas.DataFrame): The catalog to remove neighbors from.
+
+        Returns:
+            pandas.DataFrame: The catalog with neighbors removed.
+        """
+
+        # Create an instance of the IsolatedStarAssociationTask class.
         isaTask = IsolatedStarAssociationTask()
+
+        # Set the RA and Dec columns.
         isaTask.config.ra_column = "coord_ra"
         isaTask.config.dec_column = "coord_dec"
+
+        # Remove the neighbors.
         return isaTask._remove_neighbors(catalog)
