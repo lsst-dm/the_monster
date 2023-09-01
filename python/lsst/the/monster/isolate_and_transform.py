@@ -1,16 +1,11 @@
-import numpy as np
-import matplotlib.pyplot as plt
 import os
-import fitsio
 from smatch import Matcher
-import warnings
 
-from lsst.sphgeom import Box, HtmPixelization
 from lsst.pipe.tasks.isolatedStarAssociation import IsolatedStarAssociationTask
 
-from splinecolorterms import ColortermSplineFitter, ColortermSpline
-from refcats import GaiaXPInfo, GaiaDR3Info, DESInfo, SkyMapperInfo, PS1Info, VSTInfo
-from utils import read_stars
+from lsst.the.monster.splinecolorterms import ColortermSpline
+from lsst.the.monster.refcats import GaiaXPInfo, GaiaDR3Info, SkyMapperInfo, PS1Info, VSTInfo
+from lsst.the.monster.utils import read_stars
 
 __all__ = ["MatchAndTransform"]
 
@@ -24,8 +19,8 @@ Make sure interpolation behaves as expected (nan) outside range
 save catalog shard
 
 
-Question: current utils.read_stars takes a list of htm ids and reads in large catalogs 
-do we pass 1 pixel at a time
+Question: current utils.read_stars takes a list of htm ids and reads in
+large catalogs. Do we pass 1 pixel at a time?
 
 could use this to get htmids
  ra_min, ra_max, dec_min, dec_max = self.ra_dec_range
@@ -34,16 +29,18 @@ could use this to get htmids
 
         pixelization = HtmPixelization(7)
         rs = pixelization.envelope(box)
-        
-for filepaths and other config try to use: 
+
+for filepaths and other config try to use:
 class GaiaXPSplineMeasurer(SplineMeasurer):
     CatInfoClass = GaiaXPInfo
 
 
 """
 
+
 class MatchAndTransform:
-    """Match catalogs to Gaia and transform them to 'the_monster' reference frame.
+    """Match catalogs to Gaia and transform them to 'the_monster'
+       reference frame.
 
     Parameters
     ----------
@@ -54,29 +51,29 @@ class MatchAndTransform:
     testing_mode = False
 
     def run(self, htmid=None, catalog_list=[GaiaXPInfo, SkyMapperInfo, PS1Info, VSTInfo]):
-        
+
         # read in gaiaDR3 cat htmid
         # Read in the Gaia stars in the htmid.
         gaia_info = self.GaiaDR3CatInfoClass()
 
         gaia_stars_all = read_stars(gaia_info.path, [htmid], allow_missing=self.testing_mode)
 
-        # isolate the gaia cat 
+        # isolate the gaia cat
         gaia_stars = self._remove_neighbors(
-                gaia_stars_all
-            )
+            gaia_stars_all
+        )
         # loop over other catalogs
         for cat_info in catalog_list:
             # Create an output directory name for the shards:
             cat_outdir = cat_info().name+'_transformed'
 
-            # catalog_list should be a list of 
-            #cat_info = self.CatInfoClass() e.g. gaia cat
-            #read in star cat (if it exists)
+            # catalog_list should be a list of
+            # cat_info = self.CatInfoClass() e.g. gaia cat
+            # read in star cat (if it exists)
             if os.path.isfile(cat_info().path+'/'+str(htmid)+'.fits'):
                 cat_stars = read_stars(cat_info().path, [htmid], allow_missing=self.testing_mode)
 
-                #match with gaia_stars
+                # match with gaia_stars
                 with Matcher(gaia_stars["coord_ra"], gaia_stars["coord_dec"]) as m:
                     idx, i1, i2, d = m.query_knn(
                         cat_stars["coord_ra"],
@@ -90,26 +87,27 @@ class MatchAndTransform:
                     # yaml spline fits are per-band, so loop over bands
                     # read in spline
                     filename = '../../../../colorterms/'+cat_info().name+'_to_DES_band_'+str(band)+'.yaml'
-                    # Fix the path above to be relative to the_monster package root
+                    # Fix above path to be relative to the_monster package root
 
                     colorterm_spline = ColortermSpline.load(filename)
 
                     # apply colorterms to transform to des mag
                     band_1, band_2 = cat_info().get_color_bands(band)
                     model = colorterm_spline.apply(
-                            cat_stars[cat_info().get_flux_field(band_1)],
-                            cat_stars[cat_info().get_flux_field(band_2)],
-                            cat_stars[cat_info().get_flux_field(band)],
-                        )
+                        cat_stars[cat_info().get_flux_field(band_1)],
+                        cat_stars[cat_info().get_flux_field(band_2)],
+                        cat_stars[cat_info().get_flux_field(band)],
+                    )
                     # Append the modeled mags column to cat_stars
                     cat_stars.add_column(model, name=cat_info().name+'_'+model.name)
-                
+
                 write_path = 'tmp/'+cat_outdir
                 # write_path = cat_info().path+'/'+cat_outdir+'/'
-                if os.path.exists(write_path)==False:
+                if os.path.exists(write_path) is False:
                     os.makedirs(write_path)
                 write_path += f"/{htmid}.fits"
-                # Save the shard to FITS. Should probably use fitsio instead of Table.write?
+                # Save the shard to FITS.
+                # Should probably use fitsio instead of Table.write?
                 cat_stars.write(write_path, overwrite=True)
 
             else:
