@@ -55,6 +55,12 @@ class MatchAndTransform:
         for cat_info in catalog_list:
             # catalog_list should be a list of
             # cat_info = self.CatInfoClass() e.g. gaia cat
+            
+            #output columns are target catalog id, gaia id, coordinates
+            # and the des fluxes
+            outcols = ["id", gaia_info.name + "_id", "coord_ra", "coord_dec"]
+            outcols +=[f"decam_{band}_flux_from_{cat_info().name}" for band in cat_info().bands]
+            import pdb; pdb.set_trace()
             # read in star cat (if it exists)
             if os.path.isfile(cat_info().path+'/'+str(htmid)+'.fits'):
                 cat_stars = read_stars(cat_info().path, [htmid], allow_missing=self.testing_mode)
@@ -103,7 +109,8 @@ class MatchAndTransform:
                 write_path += f"/{htmid}.fits"
 
                 # Save the shard to FITS.
-                cat_stars.write(write_path, overwrite=True)
+                
+                cat_stars[outcols].write(write_path, overwrite=True)
 
             else:
                 print(cat_info().path+'/'+str(htmid)+'.fits does not exist.')

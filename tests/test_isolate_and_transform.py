@@ -18,13 +18,14 @@ class MonsterMatchAndTransformTest(lsst.utils.tests.TestCase):
             self.TargetCatInfoClass = TestGaiaXPInfo
             self.TargetCatInfoClass.name = "GaiaXP"
             self.outputColumns= ('id',
-                                'coord_ra',
-                                'coord_dec',
-                                'decam_g_flux_from_GaiaXP',
-                                'decam_r_flux_from_GaiaXP',
-                                'decam_i_flux_from_GaiaXP',
-                                'decam_z_flux_from_GaiaXP',
-                                'decam_y_flux_from_GaiaXP')
+                                 'GaiaDR3_id',
+                                 'coord_ra',
+                                 'coord_dec',
+                                 'decam_g_flux_from_GaiaXP',
+                                 'decam_r_flux_from_GaiaXP',
+                                 'decam_i_flux_from_GaiaXP',
+                                 'decam_z_flux_from_GaiaXP',
+                                 'decam_y_flux_from_GaiaXP')
 
     def test_MatchAndTransform(self):
         """
@@ -46,7 +47,7 @@ class MonsterMatchAndTransformTest(lsst.utils.tests.TestCase):
             # Run the MatchAndTransform function.
             MAT.run(htmid=htmid,
                     catalog_list=[self.TargetCatInfoClass],
-                    write_path=temp_dir
+                    write_path_inp=temp_dir
                     )
 
             # Read the output file.
