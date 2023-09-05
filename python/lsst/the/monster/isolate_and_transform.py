@@ -35,11 +35,11 @@ class MatchAndTransform:
     GaiaDR3CatInfoClass = GaiaDR3Info
     testing_mode = False
 
-    def run(self, 
-            htmid=None, 
+    def run(self,
+            htmid=None,
             catalog_list=[GaiaXPInfo, SkyMapperInfo, PS1Info, VSTInfo],
             write_path_inp=None
-    ):
+        ):
 
         # read in gaiaDR3 cat htmid
         # Read in the Gaia stars in the htmid.
@@ -101,7 +101,7 @@ class MatchAndTransform:
                 if os.path.exists(write_path) is False:
                     os.makedirs(write_path)
                 write_path += f"/{htmid}.fits"
-                
+
                 # Save the shard to FITS.
                 cat_stars.write(write_path, overwrite=True)
 
