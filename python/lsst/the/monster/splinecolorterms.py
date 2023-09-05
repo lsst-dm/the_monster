@@ -333,11 +333,11 @@ class ColortermSpline:
 
         mag_color = mag_1 - mag_2
 
-        model = self.spline.interpolate(mag_color)
-        model -= self.flux_offset/source_flux
+        target = self.spline.interpolate(mag_color) * source_flux
+        target -= self.flux_offset/source_flux
 
         # Check that things are in range.
         bad = ((mag_color < self.nodes[0]) | (mag_color > self.nodes[-1]))
-        model[bad] = np.nan
+        target[bad] = np.nan
 
-        return model
+        return target

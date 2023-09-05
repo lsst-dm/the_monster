@@ -141,18 +141,20 @@ class MonsterColortermSplineTest(lsst.utils.tests.TestCase):
 
         flux_source = np.zeros(n_star) + 10000.0
 
-        model_flux = spline.apply(flux_1, flux_2, flux_source)
+        flux_target = spline.apply(flux_1, flux_2, flux_source)
 
         # And compare directly.
+        # The target flux is the spline model (color correction) multiplied
+        # by the source flux.
         spl = lsst.afw.math.makeInterpolate(
             self._nodes,
             self._values,
             lsst.afw.math.stringToInterpStyle("CUBIC_SPLINE"),
         )
-        model = spl.interpolate(colors)
-        model -= self._flux_offset/flux_source
+        flux_target2 = spl.interpolate(colors) * flux_source
+        flux_target2 -= self._flux_offset/flux_source
 
-        np.testing.assert_array_almost_equal(model_flux, model)
+        np.testing.assert_array_almost_equal(flux_target, flux_target2)
 
     def test_spline_apply_out_of_bounds(self):
         np.random.seed(12345)
