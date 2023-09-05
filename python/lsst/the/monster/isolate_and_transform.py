@@ -38,7 +38,7 @@ class MatchAndTransform:
     def run(self, 
             htmid=None, 
             catalog_list=[GaiaXPInfo, SkyMapperInfo, PS1Info, VSTInfo],
-            write_path=None
+            write_path_inp=None
     ):
 
         # read in gaiaDR3 cat htmid
@@ -88,12 +88,18 @@ class MatchAndTransform:
                     )
                     # Append the modeled mags column to cat_stars
                     cat_stars.add_column(model, name=f"decam_{band}_flux_from_{cat_info().name}")
-                if write_path is None:
-                   write_path = cat_info().path + '_transformed/'
+
+                if write_path_inp is None:
+                    write_path = cat_info().path + '_transformed/'
+                    if cat_info().name is 'PS1':
+                        write_path = '/sdf/data/rubin/shared/the_monster/sharded_refcats/ps1_transformed'
+                else:
+                    write_path = write_path_inp
 
                 if os.path.exists(write_path) is False:
                     os.makedirs(write_path)
                 write_path += f"/{htmid}.fits"
+                
                 # Save the shard to FITS.
                 cat_stars.write(write_path, overwrite=True)
 
