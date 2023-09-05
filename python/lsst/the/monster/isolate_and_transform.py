@@ -86,12 +86,14 @@ class MatchAndTransform:
                         cat_stars[cat_info().get_flux_field(band_2)],
                         cat_stars[cat_info().get_flux_field(band)],
                     )
+
+                    model_flux = cat_stars[cat_info().get_flux_field(band)]/model
                     # Append the modeled mags column to cat_stars
-                    cat_stars.add_column(model, name=f"decam_{band}_flux_from_{cat_info().name}")
+                    cat_stars.add_column(model_flux, name=f"decam_{band}_flux_from_{cat_info().name}")
 
                 if write_path_inp is None:
                     write_path = cat_info().path + '_transformed/'
-                    if cat_info().name is 'PS1':
+                    if cat_info().name == 'PS1':
                         write_path = '/sdf/data/rubin/shared/the_monster/sharded_refcats/ps1_transformed'
                 else:
                     write_path = write_path_inp
