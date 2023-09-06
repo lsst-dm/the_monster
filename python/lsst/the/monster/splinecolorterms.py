@@ -93,7 +93,7 @@ class ColortermSplineFitter:
             pars[0: len(color_nodes)],
             lsst.afw.math.stringToInterpStyle("CUBIC_SPLINE"),
         )
-        flux_model = flux_source * spl.interpolate(mag_color)
+        flux_model = flux_source * np.array(spl.interpolate(mag_color))
 
         # Apply flux offset if there is an extra parameter.
         if len(pars) == (len(color_nodes) + 1):
@@ -343,7 +343,7 @@ class ColortermSpline:
 
         mag_color = mag_1 - mag_2
 
-        model_flux = source_flux * self.spline.interpolate(mag_color)
+        model_flux = source_flux * np.array(self.spline.interpolate(mag_color))
         model_flux -= self.flux_offset/source_flux
 
         # Check that things are in range.
