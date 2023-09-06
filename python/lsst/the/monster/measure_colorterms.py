@@ -177,7 +177,7 @@ class SplineMeasurer:
                 plt.clf()
                 plt.hexbin(
                     mag_color[selected],
-                    flux_cat[selected]/flux_des[selected],
+                    (flux_cat[selected] - flux_offset)/flux_des[selected],
                     bins='log',
                     extent=[color_range[0], color_range[1], ratio_extent[0], ratio_extent[1]],
                 )
