@@ -191,9 +191,9 @@ class SplineMeasurer:
                 plt.savefig(f"{cat_info.name}_to_{des_info.name}_band_{band}_color_term.png")
 
                 flux_target_corr = colorterm.apply(
-                     cat_stars[cat_info.get_flux_field(band_1)],
-                     cat_stars[cat_info.get_flux_field(band_2)],
-                     flux_cat,
+                    cat_stars[cat_info.get_flux_field(band_1)],
+                    cat_stars[cat_info.get_flux_field(band_2)],
+                    flux_cat,
                 )
                 resid = (flux_target_corr[selected] - flux_des[selected])/flux_des[selected]
 
