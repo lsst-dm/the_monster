@@ -97,7 +97,7 @@ class ColortermSplineFitter:
 
         # Apply flux offset if there is an extra parameter.
         if len(pars) == (len(color_nodes) + 1):
-            flux_model -= pars[-1]/flux_source
+            flux_model -= pars[-1]
 
         return flux_model
 
@@ -344,7 +344,7 @@ class ColortermSpline:
         mag_color = mag_1 - mag_2
 
         model_flux = source_flux * np.array(self.spline.interpolate(mag_color))
-        model_flux -= self.flux_offset/source_flux
+        model_flux -= self.flux_offset
 
         # Check that things are in range.
         bad = ((mag_color < self.nodes[0]) | (mag_color > self.nodes[-1]))
