@@ -172,7 +172,7 @@ class SplineMeasurer:
                 ylabel = f"{cat_info.name}_{band}/{des_info.name}_{band}"
 
                 xvals = np.linspace(color_range[0], color_range[1], 1000)
-                yvals = 1./colorterm.spline.interpolate(xvals)
+                yvals = 1./np.array(colorterm.spline.interpolate(xvals))
 
                 plt.clf()
                 plt.hexbin(
