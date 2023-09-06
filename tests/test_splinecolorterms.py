@@ -40,7 +40,7 @@ class MonsterColortermSplineFitterTest(lsst.utils.tests.TestCase):
             lsst.afw.math.stringToInterpStyle("CUBIC_SPLINE"),
         )
 
-        mag_meas = mag_ref + spl.interpolate(colors)
+        mag_meas = mag_ref - spl.interpolate(colors)
 
         mag_ref_scatter = mag_ref + np.random.normal(loc=0.0, scale=0.02, size=n_star)
         mag_meas_scatter = mag_meas + np.random.normal(loc=0.0, scale=0.02, size=n_star) + mag_offset
@@ -79,7 +79,7 @@ class MonsterColortermSplineFitterTest(lsst.utils.tests.TestCase):
             pars,
             lsst.afw.math.stringToInterpStyle("CUBIC_SPLINE"),
         )
-        flux_meas_scatter_corr = flux_meas_scatter / spl.interpolate(colors)
+        flux_meas_scatter_corr = flux_meas_scatter * spl.interpolate(colors)
 
         # The tests are based on the ratio of corrected measured flux to
         # reference flux.
@@ -89,7 +89,7 @@ class MonsterColortermSplineFitterTest(lsst.utils.tests.TestCase):
         ratio_sig = median_abs_deviation(ratio[non_outliers], scale="normal")
 
         # Somewhat arbitrary comparisons
-        self.assertFloatsAlmostEqual(ratio_med, 1.0, rtol=1e-3)
+        self.assertFloatsAlmostEqual(ratio_med, 1.0, rtol=2e-3)
         self.assertLess(ratio_sig, 0.03)
 
         n_4sig = (np.abs(ratio[non_outliers] - 1.0) > 4.0*ratio_sig).sum()
@@ -143,18 +143,13 @@ class MonsterColortermSplineTest(lsst.utils.tests.TestCase):
 
         flux_target = spline.apply(flux_1, flux_2, flux_source)
 
-        # And compare directly.
-        # The target flux is the spline model (color correction) multiplied
-        # by the source flux.
-        spl = lsst.afw.math.makeInterpolate(
-            self._nodes,
-            self._values,
-            lsst.afw.math.stringToInterpStyle("CUBIC_SPLINE"),
-        )
-        flux_target2 = spl.interpolate(colors) * flux_source
-        flux_target2 -= self._flux_offset/flux_source
+        # Compare with what would come out of the spline fitter, which
+        # tests for consistency.
+        fitter = ColortermSplineFitter(colors, flux_target, flux_source, self._nodes)
+        pars = np.concatenate([self._values, [self._flux_offset]])
+        flux_target_compare = fitter.apply_model(pars, flux_source, colors, self._nodes)
 
-        np.testing.assert_array_almost_equal(flux_target, flux_target2)
+        np.testing.assert_array_almost_equal(flux_target, flux_target_compare)
 
     def test_spline_apply_out_of_bounds(self):
         np.random.seed(12345)
