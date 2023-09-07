@@ -13,14 +13,20 @@ __all__ = ["ColortermSplineFitter", "ColortermSpline"]
 class ColortermSplineFitter:
     """Fit color-terms with splines using median statistics.
 
+    The terms here will make the fluxes in the source catalog look
+    like the target catalog over a wide range of colors.  E.g., make
+    PS1 (a source catalog) look like DES (the target catalog, used
+    for the intermediate representation.)
+
     Parameters
     ----------
     mag_color : `np.ndarray`
-        The source color (magnitudes).
+        The source color (magnitudes).  These should be computed from the
+        source catalog.
     flux_target : `np.ndarray`
-        The flux array from the reference (target) catalog.
+        The flux array from the target catalog.
     flux_source : `np.ndarray`
-        The flux array from the measured (source) catalog.
+        The flux array from the source catalog.
     color_nodes : `np.ndarray`
         Nodes to do color spline fit.
     fit_flux_offset : `bool`, optional
@@ -59,36 +65,41 @@ class ColortermSplineFitter:
         return p0
 
     @staticmethod
-    def apply_model(pars, mag_color, color_nodes, flux_source=None):
+    def apply_model(pars, flux_source, mag_color, color_nodes):
         """Apply the model and compute values.
+
+        If ``pars`` is the same length as ``color_nodes``, then there is
+        no flux offset term.  If it is one longer, then the final element
+        in ``pars`` is the flux offset term.
 
         Parameters
         ----------
         pars : `np.ndarray`
-            Parameters of the polynomial + (optional) flux_offset.
+            Parameters of the polynomial + flux_offset.
+        flux_source : `np.ndarray` (N,)
+            Source flux value.
         mag_color : `np.ndarray` (N,)
             Magnitude colors of stars.
-        color_nodes : `np.ndarray` (M,)
+        color_nodes : `np.ndarray` (N,)
             Node locations.
-        flux_source : `np.ndarray` (N,), optional
-            Source flux to apply flux_offset.
-        """
-        if flux_source is not None:
-            has_flux_offset = True
-        else:
-            has_flux_offset = False
 
+        Returns
+        -------
+        flux_model : `np.ndarray` (N,)
+            Model flux, after applying color terms to flux_source.
+        """
         spl = lsst.afw.math.makeInterpolate(
             color_nodes,
             pars[0: len(color_nodes)],
             lsst.afw.math.stringToInterpStyle("CUBIC_SPLINE"),
         )
-        model = spl.interpolate(mag_color)
+        flux_model = flux_source * np.array(spl.interpolate(mag_color))
 
-        if has_flux_offset:
-            model -= pars[-1]/flux_source
+        # Apply flux offset if there is an extra parameter.
+        if len(pars) == (len(color_nodes) + 1):
+            flux_model -= pars[-1]
 
-        return model
+        return flux_model
 
     def fit(self, p0, n_iter_flux_offset=3):
         """Perform a spline fit, perhaps with flux offset.
@@ -175,14 +186,12 @@ class ColortermSplineFitter:
         """
         if self._fit_flux_offset:
             pars = np.concatenate([spline_pars, self._flux_offset_par])
-            flux_source = self._flux_source
         else:
             pars = spline_pars
-            flux_source = None
 
-        model = self.apply_model(pars, self._mag_color, self._color_nodes, flux_source=flux_source)
+        flux_model = self.apply_model(pars, self._flux_source, self._mag_color, self._color_nodes)
 
-        absdev = np.abs(self._flux_source/self._flux_target - model)
+        absdev = np.abs(self._flux_target - flux_model)
         t = np.sum(absdev.astype(np.float64))
 
         return t
@@ -201,9 +210,10 @@ class ColortermSplineFitter:
             Median cost.
         """
         pars = np.concatenate([self._spline_pars, flux_offset_par])
-        model = self.apply_model(pars, self._mag_color, self._color_nodes, flux_source=self._flux_source)
 
-        absdev = np.abs(self._flux_source/self._flux_target - model)
+        flux_model = self.apply_model(pars, self._flux_source, self._mag_color, self._color_nodes)
+
+        absdev = np.abs(self._flux_target - flux_model)
         t = np.sum(absdev.astype(np.float64))
 
         return t
@@ -325,7 +335,7 @@ class ColortermSpline:
 
         Returns
         -------
-        target_flux : `np.ndarray` (N,)
+        model_flux : `np.ndarray` (N,)
             Array of fluxes converted to target.
         """
         mag_1 = (np.array(source_color_flux_1)*units.nJy).to_value(units.ABmag)
@@ -333,11 +343,11 @@ class ColortermSpline:
 
         mag_color = mag_1 - mag_2
 
-        model = self.spline.interpolate(mag_color)
-        model -= self.flux_offset/source_flux
+        model_flux = source_flux * np.array(self.spline.interpolate(mag_color))
+        model_flux -= self.flux_offset
 
         # Check that things are in range.
         bad = ((mag_color < self.nodes[0]) | (mag_color > self.nodes[-1]))
-        model[bad] = np.nan
+        model_flux[bad] = np.nan
 
-        return model
+        return model_flux

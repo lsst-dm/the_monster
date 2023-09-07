@@ -172,12 +172,12 @@ class SplineMeasurer:
                 ylabel = f"{cat_info.name}_{band}/{des_info.name}_{band}"
 
                 xvals = np.linspace(color_range[0], color_range[1], 1000)
-                yvals = colorterm.spline.interpolate(xvals)
+                yvals = 1./np.array(colorterm.spline.interpolate(xvals))
 
                 plt.clf()
                 plt.hexbin(
                     mag_color[selected],
-                    flux_cat[selected]/flux_des[selected],
+                    (flux_cat[selected] - flux_offset)/flux_des[selected],
                     bins='log',
                     extent=[color_range[0], color_range[1], ratio_extent[0], ratio_extent[1]],
                 )
@@ -190,12 +190,12 @@ class SplineMeasurer:
                     plt.tight_layout()
                 plt.savefig(f"{cat_info.name}_to_{des_info.name}_band_{band}_color_term.png")
 
-                model = colorterm.apply(
+                flux_target_corr = colorterm.apply(
                     cat_stars[cat_info.get_flux_field(band_1)],
                     cat_stars[cat_info.get_flux_field(band_2)],
                     flux_cat,
                 )
-                resid = flux_cat[selected]/flux_des[selected] - model[selected]
+                resid = (flux_target_corr[selected] - flux_des[selected])/flux_des[selected]
 
                 resid_extent = np.percentile(resid, [0.5, 99.5])
 
