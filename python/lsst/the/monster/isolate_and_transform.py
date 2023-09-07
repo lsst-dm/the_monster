@@ -31,6 +31,12 @@ class MatchAndTransform:
     ----------
     htmid : `int`
         htm level 7 id of catalog(s).
+    catalog_list : `list`
+        List of RefcatInfo objects for catalogs to transform.
+    write_path_inp : `str`
+        (optional) The path to write the outputs to.
+    gaia_cat_info_class : `RefcatInfo object`
+        (optional) The input Gaia DR3 RefcatInfo object.
     """
     GaiaDR3CatInfoClass = GaiaDR3Info
     testing_mode = False
@@ -38,12 +44,16 @@ class MatchAndTransform:
     def run(self,
             htmid=None,
             catalog_list=[GaiaXPInfo, SkyMapperInfo, PS1Info, VSTInfo],
-            write_path_inp=None
+            write_path_inp=None,
+            gaia_cat_info_class=None
             ):
 
         # read in gaiaDR3 cat htmid
         # Read in the Gaia stars in the htmid.
-        gaia_info = self.GaiaDR3CatInfoClass()
+        if gaia_cat_info_class is None:
+            gaia_info = self.GaiaDR3CatInfoClass()
+        else:
+            gaia_info = gaia_cat_info_class
 
         gaia_stars_all = read_stars(gaia_info.path, [htmid], allow_missing=self.testing_mode)
 

@@ -16,7 +16,7 @@ class MonsterMatchAndTransformTest(lsst.utils.tests.TestCase):
         self.TargetCatInfoClass = TestGaiaXPInfo
         self.TargetCatInfoClass.name = "GaiaXP"
         self.outputColumns = ('id',
-                              'GaiaDR3_id',
+                              'TestGaiaDR3_id',
                               'coord_ra',
                               'coord_dec',
                               'decam_g_flux_from_GaiaXP',
@@ -34,6 +34,7 @@ class MonsterMatchAndTransformTest(lsst.utils.tests.TestCase):
             htmid (int): The HTM ID.
             catalog_list (list of str): The list of catalog names.
             write_path (str): The path to write the output file.
+            gaia_cat_info_class: RefcatInfo for Gaia DR3 catalog.
         """
 
         # Set up the test.
@@ -45,12 +46,13 @@ class MonsterMatchAndTransformTest(lsst.utils.tests.TestCase):
             # Run the MatchAndTransform function.
             MAT.run(htmid=htmid,
                     catalog_list=[self.TargetCatInfoClass],
-                    write_path_inp=temp_dir
+                    write_path_inp=temp_dir,
+                    gaia_cat_info_class=self.GaiaDR3CatInfoClass()
                     )
 
             # Read the output file.
             output = fitsio.read(os.path.join(temp_dir, str(htmid) + ".fits"))
-
+            print(output.dtype.names)
             # Check the output.
             self.assertEqual(output.shape, (347,))
             self.assertEqual(output.dtype.names, self.outputColumns)
