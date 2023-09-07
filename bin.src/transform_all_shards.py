@@ -17,5 +17,5 @@ for fits in fits_list:
     gaia_htmids.append(tmp.split('.')[0])
 
 mt = MatchAndTransform()
-for htmid in gaia_htmids[:10]:
+for htmid in gaia_htmids:
     mt.run(htmid=htmid)

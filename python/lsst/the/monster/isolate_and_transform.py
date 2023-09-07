@@ -39,7 +39,7 @@ class MatchAndTransform:
             htmid=None,
             catalog_list=[GaiaXPInfo, SkyMapperInfo, PS1Info, VSTInfo],
             write_path_inp=None
-        ):
+            ):
 
         # read in gaiaDR3 cat htmid
         # Read in the Gaia stars in the htmid.
@@ -55,12 +55,12 @@ class MatchAndTransform:
         for cat_info in catalog_list:
             # catalog_list should be a list of
             # cat_info = self.CatInfoClass() e.g. gaia cat
-            
-            #output columns are target catalog id, gaia id, coordinates
+
+            # output columns are target catalog id, gaia id, coordinates,
             # and the des fluxes
             outcols = ["id", gaia_info.name + "_id", "coord_ra", "coord_dec"]
-            outcols +=[f"decam_{band}_flux_from_{cat_info().name}" for band in cat_info().bands]
-            import pdb; pdb.set_trace()
+            outcols += [f"decam_{band}_flux_from_{cat_info().name}" for band in cat_info().bands]
+
             # read in star cat (if it exists)
             if os.path.isfile(cat_info().path+'/'+str(htmid)+'.fits'):
                 cat_stars = read_stars(cat_info().path, [htmid], allow_missing=self.testing_mode)
@@ -87,18 +87,20 @@ class MatchAndTransform:
 
                     # apply colorterms to transform to des mag
                     band_1, band_2 = cat_info().get_color_bands(band)
-                    model = colorterm_spline.apply(
+                    model_flux = colorterm_spline.apply(
                         cat_stars[cat_info().get_flux_field(band_1)],
                         cat_stars[cat_info().get_flux_field(band_2)],
                         cat_stars[cat_info().get_flux_field(band)],
                     )
 
-                    model_flux = cat_stars[cat_info().get_flux_field(band)]/model
                     # Append the modeled mags column to cat_stars
                     cat_stars.add_column(model_flux, name=f"decam_{band}_flux_from_{cat_info().name}")
 
                 if write_path_inp is None:
                     write_path = cat_info().path + '_transformed/'
+                    # The PS1 refcat is coming from the Rubin shared repos, so
+                    # the output can't be in that same place. Explicitly set
+                    # the output path if transforming PS1.
                     if cat_info().name == 'PS1':
                         write_path = '/sdf/data/rubin/shared/the_monster/sharded_refcats/ps1_transformed'
                 else:
@@ -109,7 +111,6 @@ class MatchAndTransform:
                 write_path += f"/{htmid}.fits"
 
                 # Save the shard to FITS.
-                
                 cat_stars[outcols].write(write_path, overwrite=True)
 
             else:
@@ -131,6 +132,8 @@ class MatchAndTransform:
         # Set the RA and Dec columns.
         isaTask.config.ra_column = "coord_ra"
         isaTask.config.dec_column = "coord_dec"
+        # Set isolation radius to 1.0 arcsec.
+        isaTask.config.isolation_radius = 1.0
 
         # Remove the neighbors.
         return isaTask._remove_neighbors(catalog)
