@@ -7,6 +7,8 @@ from lsst.the.monster import MatchAndTransform
 from test_catalog_measurement import TestGaiaDR3Info, TestGaiaXPInfo
 import fitsio
 
+ROOT = os.path.abspath(os.path.dirname(__file__))
+
 
 class MonsterMatchAndTransformTest(lsst.utils.tests.TestCase):
     def setUp(self):
