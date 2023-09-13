@@ -2,10 +2,10 @@ import os
 from smatch import Matcher
 
 from lsst.pipe.tasks.isolatedStarAssociation import IsolatedStarAssociationTask
-
-from lsst.the.monster.splinecolorterms import ColortermSpline
-from lsst.the.monster.refcats import GaiaXPInfo, GaiaDR3Info, SkyMapperInfo, PS1Info, VSTInfo
-from lsst.the.monster.utils import read_stars
+import lsst.utils
+from .splinecolorterms import ColortermSpline
+from .refcats import GaiaXPInfo, GaiaDR3Info, SkyMapperInfo, PS1Info, VSTInfo
+from .utils import read_stars
 
 __all__ = ["MatchAndTransform"]
 
@@ -29,51 +29,63 @@ class MatchAndTransform:
 
     Parameters
     ----------
-    htmid : `int`
-        htm level 7 id of catalog(s).
-    catalog_list : `list`
+    gaia_reference_class : `RefCatInfo`
+        The input Gaia DR3 RefcatInfo object.
+    catalog_info_list : `list` [`RefcatInfo`]
         List of RefcatInfo objects for catalogs to transform.
-    write_path_inp : `str`
-        (optional) The path to write the outputs to.
-    gaia_cat_info_class : `RefcatInfo object`
-        (optional) The input Gaia DR3 RefcatInfo object.
+    write_path_inp : `str`, optional
+        The path to write the outputs to.
+    testing_mode : `bool`
+        Enter testing mode for read_stars?
     """
-    GaiaDR3CatInfoClass = GaiaDR3Info
-    testing_mode = False
+
+    def __init__(self,
+                 gaia_reference_class=GaiaDR3Info,
+                 catalog_info_list=[GaiaXPInfo, SkyMapperInfo, PS1Info, VSTInfo],
+                 write_path_inp=None,
+                 testing_mode=False,
+                 ):
+
+        self.gaia_reference_class = gaia_reference_class()
+        self.catalog_info_list = [cat_info() for cat_info in catalog_info_list]
+        self.testing_mode = testing_mode
+        self.write_path_inp = write_path_inp
 
     def run(self,
-            htmid=None,
-            catalog_list=[GaiaXPInfo, SkyMapperInfo, PS1Info, VSTInfo],
-            write_path_inp=None,
-            gaia_cat_info_class=None
+            *,
+            htmid,
             ):
+        """Match catalogs to Gaia and transform them to 'the_monster'
+           reference frame.
 
-        # read in gaiaDR3 cat htmid
+        Parameters
+        ----------
+        htmid : `int`
+            HTM id of the catalogs.
+        """
+
         # Read in the Gaia stars in the htmid.
-        if gaia_cat_info_class is None:
-            gaia_info = self.GaiaDR3CatInfoClass()
-        else:
-            gaia_info = gaia_cat_info_class
-
-        gaia_stars_all = read_stars(gaia_info.path, [htmid], allow_missing=self.testing_mode)
+        gaia_stars_all = read_stars(self.gaia_reference_class.path, [htmid],
+                                    allow_missing=self.testing_mode)
 
         # isolate the gaia cat
         gaia_stars = self._remove_neighbors(
             gaia_stars_all
         )
         # loop over other catalogs
-        for cat_info in catalog_list:
-            # catalog_list should be a list of
+        for cat_info in self.catalog_info_list:
+            # catalog_info_list should be a list of
             # cat_info = self.CatInfoClass() e.g. gaia cat
 
             # output columns are target catalog id, gaia id, coordinates,
             # and the des fluxes
-            outcols = ["id", gaia_info.name + "_id", "coord_ra", "coord_dec"]
-            outcols += [f"decam_{band}_flux_from_{cat_info().name}" for band in cat_info().bands]
+            outcols = ["id", self.gaia_reference_class.name + "_id", "coord_ra", "coord_dec"]
+            outcols += [f"decam_{band}_from_{cat_info.name}_flux" for band in cat_info.bands]
+            outcols += [f"decam_{band}_from_{cat_info.name}_fluxErr" for band in cat_info.bands]
 
             # read in star cat (if it exists)
-            if os.path.isfile(cat_info().path+'/'+str(htmid)+'.fits'):
-                cat_stars = read_stars(cat_info().path, [htmid], allow_missing=self.testing_mode)
+            if os.path.isfile(cat_info.path+'/'+str(htmid)+'.fits'):
+                cat_stars = read_stars(cat_info.path, [htmid], allow_missing=self.testing_mode)
 
                 # match with gaia_stars
                 with Matcher(gaia_stars["coord_ra"], gaia_stars["coord_dec"]) as m:
@@ -84,37 +96,46 @@ class MatchAndTransform:
                         return_indices=True,
                     )
                 cat_stars = cat_stars[i2]
-                cat_stars.add_column(gaia_stars["id"][i1], name=gaia_info.name + "_id")
+                cat_stars.add_column(gaia_stars["id"][i1],
+                                     name=self.gaia_reference_class.name + "_id")
 
                 for band in cat_info.bands:
                     # yaml spline fits are per-band, so loop over bands
                     # read in spline
-                    filename = os.path.abspath(os.path.dirname(__file__))[:-23]
-                    filename += 'colorterms/'+cat_info().name
-                    filename += '_to_DES_band_'+str(band)+'.yaml'
+                    filename = os.path.join(lsst.utils.getPackageDir("the_monster"),
+                                            "colorterms/",
+                                            f"{cat_info.name}_to_DES_band_{band}.yaml")
 
                     colorterm_spline = ColortermSpline.load(filename)
 
                     # apply colorterms to transform to des mag
-                    band_1, band_2 = cat_info().get_color_bands(band)
+                    band_1, band_2 = cat_info.get_color_bands(band)
+                    orig_flux = cat_stars[cat_info.get_flux_field(band)]
+                    orig_flux_err = cat_stars[cat_info.get_flux_field(band)+'Err']
                     model_flux = colorterm_spline.apply(
-                        cat_stars[cat_info().get_flux_field(band_1)],
-                        cat_stars[cat_info().get_flux_field(band_2)],
-                        cat_stars[cat_info().get_flux_field(band)],
+                        cat_stars[cat_info.get_flux_field(band_1)],
+                        cat_stars[cat_info.get_flux_field(band_2)],
+                        orig_flux,
                     )
 
-                    # Append the modeled mags column to cat_stars
-                    cat_stars.add_column(model_flux, name=f"decam_{band}_flux_from_{cat_info().name}")
+                    # Rescale flux error to keep S/N constant
+                    model_flux_err = model_flux * (orig_flux_err/orig_flux)
 
-                if write_path_inp is None:
-                    write_path = cat_info().path + '_transformed/'
+                    # Append the modeled mags column to cat_stars
+                    cat_stars.add_column(model_flux,
+                                         name=f"decam_{band}_from_{cat_info.name}_flux")
+                    cat_stars.add_column(model_flux_err,
+                                         name=f"decam_{band}_from_{cat_info.name}_fluxErr")
+
+                if self.write_path_inp is None:
+                    write_path = cat_info.path + '_transformed/'
                     # The PS1 refcat is coming from the Rubin shared repos, so
                     # the output can't be in that same place. Explicitly set
                     # the output path if transforming PS1.
-                    if cat_info().name == 'PS1':
+                    if cat_info.name == 'PS1':
                         write_path = '/sdf/data/rubin/shared/the_monster/sharded_refcats/ps1_transformed'
                 else:
-                    write_path = write_path_inp
+                    write_path = self.write_path_inp
 
                 if os.path.exists(write_path) is False:
                     os.makedirs(write_path)
@@ -124,7 +145,7 @@ class MatchAndTransform:
                 cat_stars[outcols].write(write_path, overwrite=True)
 
             else:
-                print(cat_info().path+'/'+str(htmid)+'.fits does not exist.')
+                print(cat_info.path+'/'+str(htmid)+'.fits does not exist.')
 
     def _remove_neighbors(self, catalog):
         """Removes neighbors from a catalog.

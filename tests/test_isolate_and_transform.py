@@ -19,11 +19,16 @@ class MonsterMatchAndTransformTest(lsst.utils.tests.TestCase):
                               'TestGaiaDR3_id',
                               'coord_ra',
                               'coord_dec',
-                              'decam_g_flux_from_GaiaXP',
-                              'decam_r_flux_from_GaiaXP',
-                              'decam_i_flux_from_GaiaXP',
-                              'decam_z_flux_from_GaiaXP',
-                              'decam_y_flux_from_GaiaXP')
+                              'decam_g_from_GaiaXP_flux',
+                              'decam_r_from_GaiaXP_flux',
+                              'decam_i_from_GaiaXP_flux',
+                              'decam_z_from_GaiaXP_flux',
+                              'decam_y_from_GaiaXP_flux',
+                              'decam_g_from_GaiaXP_fluxErr',
+                              'decam_r_from_GaiaXP_fluxErr',
+                              'decam_i_from_GaiaXP_fluxErr',
+                              'decam_z_from_GaiaXP_fluxErr',
+                              'decam_y_from_GaiaXP_fluxErr')
 
     def test_MatchAndTransform(self):
         """
@@ -39,16 +44,16 @@ class MonsterMatchAndTransformTest(lsst.utils.tests.TestCase):
 
         # Set up the test.
         htmid = 147267
-        MAT = MatchAndTransform()
+
         with tempfile.TemporaryDirectory() as temp_dir:
             os.chdir(temp_dir)
+            mat = MatchAndTransform(catalog_info_list=[self.TargetCatInfoClass],
+                                    write_path_inp=temp_dir,
+                                    gaia_reference_class=self.GaiaDR3CatInfoClass,
+                                    )
 
             # Run the MatchAndTransform function.
-            MAT.run(htmid=htmid,
-                    catalog_list=[self.TargetCatInfoClass],
-                    write_path_inp=temp_dir,
-                    gaia_cat_info_class=self.GaiaDR3CatInfoClass()
-                    )
+            mat.run(htmid=htmid)
 
             # Read the output file.
             output = fitsio.read(os.path.join(temp_dir, str(htmid) + ".fits"))
