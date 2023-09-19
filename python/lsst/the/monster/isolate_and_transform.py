@@ -5,7 +5,7 @@ from lsst.pipe.tasks.isolatedStarAssociation import IsolatedStarAssociationTask
 import lsst.utils
 from .splinecolorterms import ColortermSpline
 from .refcats import GaiaXPInfo, GaiaDR3Info, SkyMapperInfo, PS1Info, VSTInfo
-from .utils import read_stars
+from .utils import read_stars, makeRefSchema, makeRefCat
 
 __all__ = ["MatchAndTransform"]
 
@@ -121,7 +121,7 @@ class MatchAndTransform:
                     # Rescale flux error to keep S/N constant
                     model_flux_err = model_flux * (orig_flux_err/orig_flux)
 
-                    # Append the modeled mags column to cat_stars
+                    # Append the modeled flux columns to cat_stars
                     cat_stars.add_column(model_flux,
                                          name=f"decam_{band}_from_{cat_info.name}_flux")
                     cat_stars.add_column(model_flux_err,
@@ -141,8 +141,13 @@ class MatchAndTransform:
                     os.makedirs(write_path)
                 write_path += f"/{htmid}.fits"
 
+                # Convert the refcat to a SimpleCatalog
+                refSchema = makeRefSchema(cat_info.name, cat_info.bands)
+                refCat = makeRefCat(refSchema, cat_stars[outcols],
+                                    cat_info.name, cat_info.bands)
+
                 # Save the shard to FITS.
-                cat_stars[outcols].write(write_path, overwrite=True)
+                refCat.writeFits(write_path, overwrite=True)
 
             else:
                 print(cat_info.path+'/'+str(htmid)+'.fits does not exist.')
