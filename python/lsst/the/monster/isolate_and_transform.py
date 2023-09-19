@@ -31,7 +31,7 @@ class MatchAndTransform:
     ----------
     gaia_reference_class : `RefCatInfo`
         The input Gaia DR3 RefcatInfo object.
-    catalog_info_list : `list` [`RefcatInfo`]
+    catalog_info_class_list : `list` [`RefcatInfo`]
         List of RefcatInfo objects for catalogs to transform.
     write_path_inp : `str`, optional
         The path to write the outputs to.
@@ -41,19 +41,22 @@ class MatchAndTransform:
 
     def __init__(self,
                  gaia_reference_class=GaiaDR3Info,
-                 catalog_info_list=[GaiaXPInfo, SkyMapperInfo, PS1Info, VSTInfo],
+                 catalog_info_class_list=[GaiaXPInfo, SkyMapperInfo,
+                                          PS1Info, VSTInfo],
                  write_path_inp=None,
                  testing_mode=False,
                  ):
 
-        self.gaia_reference_class = gaia_reference_class()
-        self.catalog_info_list = [cat_info() for cat_info in catalog_info_list]
+        self.gaia_reference_info = gaia_reference_class()
+        self.catalog_info_class_list = [cat_info() for cat_info
+                                        in catalog_info_class_list]
         self.testing_mode = testing_mode
         self.write_path_inp = write_path_inp
 
     def run(self,
             *,
             htmid,
+            verbose=False,
             ):
         """Match catalogs to Gaia and transform them to 'the_monster'
            reference frame.
@@ -65,7 +68,7 @@ class MatchAndTransform:
         """
 
         # Read in the Gaia stars in the htmid.
-        gaia_stars_all = read_stars(self.gaia_reference_class.path, [htmid],
+        gaia_stars_all = read_stars(self.gaia_reference_info.path, [htmid],
                                     allow_missing=self.testing_mode)
 
         # isolate the gaia cat
@@ -73,13 +76,13 @@ class MatchAndTransform:
             gaia_stars_all
         )
         # loop over other catalogs
-        for cat_info in self.catalog_info_list:
-            # catalog_info_list should be a list of
+        for cat_info in self.catalog_info_class_list:
+            # catalog_info_class_list should be a list of
             # cat_info = self.CatInfoClass() e.g. gaia cat
 
             # output columns are target catalog id, gaia id, coordinates,
             # and the des fluxes
-            outcols = ["id", self.gaia_reference_class.name + "_id", "coord_ra", "coord_dec"]
+            outcols = ["id", self.gaia_reference_info.name + "_id", "coord_ra", "coord_dec"]
             outcols += [f"decam_{band}_from_{cat_info.name}_flux" for band in cat_info.bands]
             outcols += [f"decam_{band}_from_{cat_info.name}_fluxErr" for band in cat_info.bands]
 
@@ -97,7 +100,7 @@ class MatchAndTransform:
                     )
                 cat_stars = cat_stars[i2]
                 cat_stars.add_column(gaia_stars["id"][i1],
-                                     name=self.gaia_reference_class.name + "_id")
+                                     name=self.gaia_reference_info.name + "_id")
 
                 for band in cat_info.bands:
                     # yaml spline fits are per-band, so loop over bands
@@ -142,15 +145,21 @@ class MatchAndTransform:
                 write_path += f"/{htmid}.fits"
 
                 # Convert the refcat to a SimpleCatalog
-                refSchema = makeRefSchema(cat_info.name, cat_info.bands)
+                refSchema = makeRefSchema(cat_info.name, cat_info.bands,
+                                          self.gaia_reference_info.name)
                 refCat = makeRefCat(refSchema, cat_stars[outcols],
-                                    cat_info.name, cat_info.bands)
+                                    cat_info.name, cat_info.bands,
+                                    self.gaia_reference_info.name)
 
                 # Save the shard to FITS.
-                refCat.writeFits(write_path, overwrite=True)
+                refCat.writeFits(write_path)
+
+                if verbose:
+                    print('Transformed '+cat_info.path+'/'+str(htmid)+'.fits')
 
             else:
-                print(cat_info.path+'/'+str(htmid)+'.fits does not exist.')
+                if verbose:
+                    print(cat_info.path+'/'+str(htmid)+'.fits does not exist.')
 
     def _remove_neighbors(self, catalog):
         """Removes neighbors from a catalog.

@@ -18,4 +18,4 @@ for fits in fits_list:
 
 mt = MatchAndTransform()
 for htmid in gaia_htmids:
-    mt.run(htmid=htmid)
+    mt.run(htmid=htmid, verbose=True)
