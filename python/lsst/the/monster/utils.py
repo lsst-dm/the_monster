@@ -47,6 +47,9 @@ def read_stars(path, indices, allow_missing=False):
 
     return stars
 
+'''
+# Only needed if we want the original fluxes in the
+# transformed catalogs.
 def getSurveyFluxColumnName(survey, band):
     """
     Retrieve the flux column names for a given survey.
@@ -75,6 +78,7 @@ def getSurveyFluxColumnName(survey, band):
         print('Could not find '+survey+' survey for flux column formatting.')
 
     return fluxname
+'''
 
 def makeRefSchema(survey, bands):
     """
@@ -103,6 +107,8 @@ def makeRefSchema(survey, bands):
         refSchema.addField(colname_err, type='D',
                            doc='error on flux transformed to DECam system')
 
+        # Only needed if we want the original fluxes in the
+        # transformed catalogs.
         # fluxname = getSurveyFluxColumnName(survey, band)
         # fluxerrname = fluxname+'Err'
         # refSchema.addField(fluxname, type='D',
@@ -144,10 +150,11 @@ def makeRefCat(refSchema, refTable, survey, bands):
     for band in bands:
         colname = 'decam_'+band+'_from_'+survey+'_flux'
         colname_err = colname+'Err'
-        # import pdb; pdb.set_trace()
         refCat[colname][:] = refTable[colname]
         refCat[colname_err][:] = refTable[colname_err]
  
+        # Only needed if we want the original fluxes in the
+        # transformed catalogs.
         # fluxname = getSurveyFluxColumnName(survey, band)
         # fluxerrname = fluxname+'Err'
         # refCat[fluxname][:] = refTable[fluxname]
