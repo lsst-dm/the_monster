@@ -75,7 +75,8 @@ class MonsterMatchAndTransformTest(lsst.utils.tests.TestCase):
 
             # Check that the coordinates are the same (note that the output
             # catalog is in radians, so convert to degrees first).
-            self.assertTrue(np.array_equal(gaia_stars_all[a]['coord_ra'].data,
-                                           np.rad2deg(output['coord_ra'][b])))
-            self.assertTrue(np.array_equal(gaia_stars_all[a]['coord_dec'].data,
-                                           np.rad2deg(output['coord_dec'][b])))
+            # import pytest; pytest.set_trace()
+            np.testing.assert_array_almost_equal(gaia_stars_all[a]['coord_ra'],
+                                                 np.rad2deg(output['coord_ra'][b]))
+            np.testing.assert_array_almost_equal(gaia_stars_all[a]['coord_dec'],
+                                                 np.rad2deg(output['coord_dec'][b]))

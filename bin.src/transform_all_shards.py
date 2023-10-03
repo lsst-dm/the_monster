@@ -8,7 +8,7 @@ GaiaDR3CatInfoClass = GaiaDR3Info
 gaia_info = GaiaDR3CatInfoClass()
 
 # Make a list of all the Gaia shards:
-fits_list = glob.glob(gaia_info.path+'/*.fits')
+fits_list = sorted(glob.glob(gaia_info.path+'/*.fits'))
 
 # Extract just the htmid from these
 gaia_htmids = []
