@@ -1,11 +1,14 @@
+import esutil
+import numpy as np
 import os
 import tempfile
 
+import lsst.afw as afw
 import lsst.utils
 
 from lsst.the.monster import MatchAndTransform
+from lsst.the.monster.utils import read_stars
 from test_catalog_measurement import TestGaiaDR3Info, TestGaiaXPInfo
-import fitsio
 
 ROOT = os.path.abspath(os.path.dirname(__file__))
 
@@ -15,7 +18,7 @@ class MonsterMatchAndTransformTest(lsst.utils.tests.TestCase):
         self.GaiaDR3CatInfoClass = TestGaiaDR3Info
         self.TargetCatInfoClass = TestGaiaXPInfo
         self.TargetCatInfoClass.name = "GaiaXP"
-        self.outputColumns = ('id',
+        self.outputColumns = ['id',
                               'coord_ra',
                               'coord_dec',
                               'TestGaiaDR3_id',
@@ -28,7 +31,7 @@ class MonsterMatchAndTransformTest(lsst.utils.tests.TestCase):
                               'decam_z_from_GaiaXP_flux',
                               'decam_z_from_GaiaXP_fluxErr',
                               'decam_y_from_GaiaXP_flux',
-                              'decam_y_from_GaiaXP_fluxErr')
+                              'decam_y_from_GaiaXP_fluxErr']
 
     def test_MatchAndTransform(self):
         """
@@ -56,9 +59,23 @@ class MonsterMatchAndTransformTest(lsst.utils.tests.TestCase):
             mat.run(htmid=htmid)
 
             # Read the output file.
-            output = fitsio.read(os.path.join(temp_dir, str(htmid) + ".fits"))
-            print('shape: ', output.shape)
-            print('column names: ', output.dtype.names)
+            fits_path = os.path.join(temp_dir, str(htmid) + ".fits")
+            output = afw.table.SimpleCatalog.readFits(fits_path)
+
             # Check the output.
-            self.assertEqual(output.shape, (347,))
-            self.assertEqual(output.dtype.names, self.outputColumns)
+            self.assertEqual(len(output), 347)
+            self.assertEqual(output.schema.getOrderedNames(), self.outputColumns)
+
+            # Check that the positions are the same for this catalog and Gaia
+            # Read in the Gaia stars in the htmid.
+            gaia_stars_all = read_stars(self.GaiaDR3CatInfoClass().path, [htmid],
+                                        allow_missing=False)
+            # Match the output catalog to Gaia.
+            a, b = esutil.numpy_util.match(gaia_stars_all['id'], output['id'])
+
+            # Check that the coordinates are the same (note that the output
+            # catalog is in radians, so convert to degrees first).
+            self.assertTrue(np.array_equal(gaia_stars_all[a]['coord_ra'].data,
+                                           np.rad2deg(output['coord_ra'][b])))
+            self.assertTrue(np.array_equal(gaia_stars_all[a]['coord_dec'].data,
+                                           np.rad2deg(output['coord_dec'][b])))

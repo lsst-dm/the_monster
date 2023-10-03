@@ -4,7 +4,6 @@ import numpy as np
 
 from lsst.afw.table import SimpleCatalog
 import lsst.afw.table as afwTable
-import lsst.geom as geom
 
 __all__ = ["read_stars", "makeRefSchema", "makeRefCat"]
 
@@ -73,9 +72,11 @@ def makeRefSchema(survey, bands, reference_name):
         colname = 'decam_'+band+'_from_'+survey+'_flux'
         colname_err = colname+'Err'
         refSchema.addField(colname, type='D',
-                           doc='flux transformed to DECam system')
+                           doc='flux transformed to DECam system',
+                           units='nJy')
         refSchema.addField(colname_err, type='D',
-                           doc='error on flux transformed to DECam system')
+                           doc='error on flux transformed to DECam system',
+                           units='nJy')
 
     return refSchema
 
@@ -108,8 +109,8 @@ def makeRefCat(refSchema, refTable, survey, bands, reference_name):
 
     refCat['id'][:] = refTable['id']
     refCat[reference_name+'_id'][:] = refTable[reference_name+'_id']
-    refCat['coord_ra'][:] = refTable['coord_ra'] * geom.degrees
-    refCat['coord_dec'][:] = refTable['coord_dec'] * geom.degrees
+    refCat['coord_ra'][:] = np.deg2rad(refTable['coord_ra'])
+    refCat['coord_dec'][:] = np.deg2rad(refTable['coord_dec'])
 
     for band in bands:
         colname = 'decam_'+band+'_from_'+survey+'_flux'
