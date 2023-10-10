@@ -236,3 +236,7 @@ class PS1SplineMeasurer(SplineMeasurer):
 
 class VSTSplineMeasurer(SplineMeasurer):
     CatInfoClass = VSTInfo
+
+
+class DESSplineMeasurer(SplineMeasurer):
+    CatInfoClass = DESInfo
