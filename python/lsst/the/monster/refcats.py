@@ -10,13 +10,22 @@ __all__ = ["GaiaDR3Info", "GaiaXPInfo", "DESInfo", "SkyMapperInfo", "PS1Info", "
 
 class RefcatInfo(ABC):
     PATH = ""
+    WRITE_PATH = None
     NAME = ""
 
-    def __init__(self, path=None, name=None):
+    def __init__(self, path=None, write_path=None, name=None):
         if path is None:
             self._path = self.PATH
         else:
             self._path = path
+
+        if write_path is None:
+            if self.WRITE_PATH is None:
+                self._write_path = self._path + "_transformed"
+            else:
+                self._write_path = self.WRITE_PATH
+        else:
+            self._write_path = write_path
 
         if name is None:
             self._name = self.NAME
@@ -26,6 +35,10 @@ class RefcatInfo(ABC):
     @property
     def path(self):
         return self._path
+
+    @property
+    def write_path(self):
+        return self._write_path
 
     @property
     def name(self):
@@ -288,6 +301,7 @@ class SkyMapperInfo(RefcatInfo):
 
 class PS1Info(RefcatInfo):
     PATH = "/fs/ddn/sdf/group/rubin/ncsa-datasets/refcats/htm/v1/ps1_pv3_3pi_20170110"
+    WRITE_PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/ps1_transformed"
     NAME = "PS1"
     bands = ['g', 'r', 'i', 'z']
 

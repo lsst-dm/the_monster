@@ -131,12 +131,7 @@ class MatchAndTransform:
                                          name=f"decam_{band}_from_{cat_info.name}_fluxErr")
 
                 if self.write_path_inp is None:
-                    write_path = cat_info.path + '_transformed/'
-                    # The PS1 refcat is coming from the Rubin shared repos, so
-                    # the output can't be in that same place. Explicitly set
-                    # the output path if transforming PS1.
-                    if cat_info.name == 'PS1':
-                        write_path = '/sdf/data/rubin/shared/the_monster/sharded_refcats/ps1_transformed'
+                    write_path = cat_info.write_path
                 else:
                     write_path = self.write_path_inp
 
