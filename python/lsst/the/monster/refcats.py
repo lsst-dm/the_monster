@@ -379,6 +379,17 @@ class PS1Info(RefcatInfo):
         else:
             return (0.0, np.inf)
 
+    def select_stars(self, catalog, band):
+        selected = super().select_stars(catalog, band)
+
+        unique_ids, unique_index = np.unique(catalog["id"], return_index=True)
+        if len(unique_ids) < len(catalog):
+            unique_selected = np.zeros(len(catalog), dtype=bool)
+            unique_selected[unique_index] = True
+            selected &= unique_selected
+
+        return selected
+
 
 class VSTInfo(RefcatInfo):
     PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/vst_atlas_20221205"
