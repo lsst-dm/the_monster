@@ -1,3 +1,4 @@
+import unittest
 import esutil
 import numpy as np
 import os
@@ -80,3 +81,12 @@ class MonsterMatchAndTransformTest(lsst.utils.tests.TestCase):
                                                  np.rad2deg(output['coord_ra'][b]))
             np.testing.assert_array_almost_equal(gaia_stars_all[a]['coord_dec'],
                                                  np.rad2deg(output['coord_dec'][b]))
+
+
+def setup_module(module):
+    lsst.utils.tests.init()
+
+
+if __name__ == "__main__":
+    lsst.utils.tests.init()
+    unittest.main()
