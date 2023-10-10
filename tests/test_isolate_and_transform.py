@@ -9,15 +9,15 @@ import lsst.utils
 
 from lsst.the.monster import MatchAndTransform
 from lsst.the.monster.utils import read_stars
-from test_catalog_measurement import TestGaiaDR3Info, TestGaiaXPInfo
+from test_catalog_measurement import GaiaDR3InfoTester, GaiaXPInfoTester
 
 ROOT = os.path.abspath(os.path.dirname(__file__))
 
 
 class MonsterMatchAndTransformTest(lsst.utils.tests.TestCase):
     def setUp(self):
-        self.GaiaDR3CatInfoClass = TestGaiaDR3Info
-        self.TargetCatInfoClass = TestGaiaXPInfo
+        self.GaiaDR3CatInfoClass = GaiaDR3InfoTester
+        self.TargetCatInfoClass = GaiaXPInfoTester
         self.TargetCatInfoClass.name = "GaiaXP"
         self.outputColumns = ['id',
                               'coord_ra',

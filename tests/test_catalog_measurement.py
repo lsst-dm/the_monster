@@ -15,25 +15,25 @@ from lsst.the.monster import GaiaXPSplineMeasurer  # noqa: E402
 ROOT = os.path.abspath(os.path.dirname(__file__))
 
 
-class TestGaiaDR3Info(GaiaDR3Info):
+class GaiaDR3InfoTester(GaiaDR3Info):
     PATH = os.path.join(ROOT, "data", "gaia_dr3")
     NAME = "TestGaiaDR3"
 
 
-class TestGaiaXPInfo(GaiaXPInfo):
+class GaiaXPInfoTester(GaiaXPInfo):
     PATH = os.path.join(ROOT, "data", "gaia_xp")
     NAME = "TestGaiaXP"
 
 
-class TestDESInfo(DESInfo):
+class DESInfoTester(DESInfo):
     PATH = os.path.join(ROOT, "data", "des")
     NAME = "TestDES"
 
 
-class TestGaiaXPSplineMeasurer(GaiaXPSplineMeasurer):
-    CatInfoClass = TestGaiaXPInfo
-    TargetCatInfoClass = TestDESInfo
-    GaiaCatInfoClass = TestGaiaDR3Info
+class GaiaXPSplineMeasurerTester(GaiaXPSplineMeasurer):
+    CatInfoClass = GaiaXPInfoTester
+    TargetCatInfoClass = DESInfoTester
+    GaiaCatInfoClass = GaiaDR3InfoTester
 
     testing_mode = True
 
@@ -47,7 +47,7 @@ class SplineMeasurerTest(lsst.utils.tests.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             os.chdir(temp_dir)
 
-            measurer = TestGaiaXPSplineMeasurer()
+            measurer = GaiaXPSplineMeasurerTester()
 
             yaml_files = measurer.measure_spline_fit()
 
