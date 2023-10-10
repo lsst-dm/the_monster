@@ -240,7 +240,7 @@ class GaiaDR3Info(RefcatInfo):
 class GaiaXPInfo(RefcatInfo):
     PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/gaia_xp_ps_des_sdss_sm_20221216"
     NAME = "GaiaXP"
-    bands = ['g', 'r', 'i', 'z', 'y']
+    bands = ["g", "r", "i", "z", "y"]
 
     def get_flux_field(self, band):
         _band = band
@@ -268,6 +268,23 @@ class DESInfo(RefcatInfo):
     def get_imz_color_range(self):
         return (0.0, 0.8)
 
+    def get_mag_range(self, band):
+        if band == "g":
+            return (16.25, np.inf)
+        elif band == "r":
+            return (16.0, np.inf)
+        elif band == "i":
+            return (15.5, np.inf)
+        elif band == "z":
+            return (15.0, np.inf)
+        elif band == "y":
+            return (15.0, np.inf)
+        else:
+            return (-np.inf, np.inf)
+
+    def get_sn_range(self, band):
+        return (10.0, np.inf)
+
     def select_stars(self, catalog, band):
         selected = super().select_stars(catalog, band)
 
@@ -287,7 +304,7 @@ class DESInfo(RefcatInfo):
 class SkyMapperInfo(RefcatInfo):
     PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/sky_mapper_dr2_20221205"
     NAME = "SkyMapper"
-    bands = ['g', 'r', 'i', 'z']
+    bands = ["g", "r", "i", "z"]
 
     def get_flux_field(self, band):
         return f"{band}_psf_flux"
@@ -298,12 +315,36 @@ class SkyMapperInfo(RefcatInfo):
     def get_imz_color_range(self):
         return (0.0, 0.7)
 
+    def get_mag_range(self, band):
+        if band == "g":
+            return (13.0, 21.0)
+        elif band == "r":
+            return (12.5, 21.0)
+        elif band == "i":
+            return (12.0, 20.6)
+        elif band == "z":
+            return (12.0, 19.75)
+        else:
+            return (-np.inf, np.inf)
+
+    def get_sn_range(self, band):
+        if band == "g":
+            return (50.0, np.inf)
+        elif band == "r":
+            return (50.0, np.inf)
+        elif band == "i":
+            return (50.0, np.inf)
+        elif band == "z":
+            return (50.0, np.inf)
+        else:
+            return (0.0, np.inf)
+
 
 class PS1Info(RefcatInfo):
     PATH = "/fs/ddn/sdf/group/rubin/ncsa-datasets/refcats/htm/v1/ps1_pv3_3pi_20170110"
     WRITE_PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/ps1_transformed"
     NAME = "PS1"
-    bands = ['g', 'r', 'i', 'z']
+    bands = ["g", "r", "i", "z"]
 
     def get_flux_field(self, band):
         return f"{band}_flux"
@@ -314,11 +355,35 @@ class PS1Info(RefcatInfo):
     def get_imz_color_range(self):
         return (0.0, 0.7)
 
+    def get_mag_range(self, band):
+        if band == "g":
+            return (13.0, 21.25)
+        elif band == "r":
+            return (13.25, 20.25)
+        elif band == "i":
+            return (13.75, 19.5)
+        elif band == "z":
+            return (13.75, 19.0)
+        else:
+            return (-np.inf, np.inf)
+
+    def get_sn_range(self, band):
+        if band == "g":
+            return (50.0, np.inf)
+        elif band == "r":
+            return (30.0, np.inf)
+        elif band == "i":
+            return (30.0, np.inf)
+        elif band == "z":
+            return (30.0, np.inf)
+        else:
+            return (0.0, np.inf)
+
 
 class VSTInfo(RefcatInfo):
     PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/vst_atlas_20221205"
     NAME = "VST"
-    bands = ['g', 'r', 'i', 'z']
+    bands = ["g", "r", "i", "z"]
 
     def get_flux_field(self, band):
         return f"{band.upper()}APERMAG3_flux"
@@ -328,3 +393,27 @@ class VSTInfo(RefcatInfo):
 
     def get_imz_color_range(self):
         return (0.2, 0.8)
+
+    def get_mag_range(self, band):
+        if band == "g":
+            return (18.0, 21.5)
+        elif band == "r":
+            return (17.0, 21.0)
+        elif band == "i":
+            return (16.0, 20.5)
+        elif band == "z":
+            return (15.5, 19.25)
+        else:
+            return (-np.inf, np.inf)
+
+    def get_sn_range(self, band):
+        if band == "g":
+            return (20.0, np.inf)
+        elif band == "r":
+            return (20.0, np.inf)
+        elif band == "i":
+            return (20.0, np.inf)
+        elif band == "z":
+            return (20.0, np.inf)
+        else:
+            return (0.0, np.inf)
