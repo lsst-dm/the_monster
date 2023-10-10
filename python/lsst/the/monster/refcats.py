@@ -344,7 +344,7 @@ class PS1Info(RefcatInfo):
     PATH = "/fs/ddn/sdf/group/rubin/ncsa-datasets/refcats/htm/v1/ps1_pv3_3pi_20170110"
     WRITE_PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/ps1_transformed"
     NAME = "PS1"
-    bands = ["g", "r", "i", "z"]
+    bands = ["g", "r", "i", "z", "y"]
 
     def get_flux_field(self, band):
         return f"{band}_flux"
@@ -364,6 +364,8 @@ class PS1Info(RefcatInfo):
             return (13.75, 19.5)
         elif band == "z":
             return (13.75, 19.0)
+        elif band == "y":
+            return (13.75, 18.0)
         else:
             return (-np.inf, np.inf)
 
@@ -375,6 +377,8 @@ class PS1Info(RefcatInfo):
         elif band == "i":
             return (30.0, np.inf)
         elif band == "z":
+            return (30.0, np.inf)
+        elif band == "y":
             return (30.0, np.inf)
         else:
             return (0.0, np.inf)
