@@ -16,8 +16,8 @@ for fits in fits_list:
     tmp = fits.split('/')[-1]
     gaia_htmids.append(tmp.split('.')[0])
 
-# The following line is for running the DES-to-DES only:
-mt = MatchAndTransform(catalog_info_class_list=[DESInfo])
-# mt = MatchAndTransform()
+# The following line is for running the DES-to-DES "transform" only:
+# mt = MatchAndTransform(catalog_info_class_list=[DESInfo])
+mt = MatchAndTransform()
 for htmid in gaia_htmids:
     mt.run(htmid=htmid, verbose=True)
