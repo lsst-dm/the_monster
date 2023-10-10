@@ -92,7 +92,7 @@ class MatchAndTransform:
                 cat_stars = read_stars(cat_info.path, [htmid], allow_missing=self.testing_mode)
 
                 # match with gaia_stars
-                with Matcher(cat["coord_ra"], cat_stars["coord_dec"]) as m:
+                with Matcher(cat_stars["coord_ra"], cat_stars["coord_dec"]) as m:
                     idx, i1, i2, d = m.query_knn(
                         gaia_stars["coord_ra"],
                         gaia_stars["coord_dec"],
