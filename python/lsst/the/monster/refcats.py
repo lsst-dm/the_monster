@@ -1,5 +1,6 @@
 import numpy as np
 from astropy import units
+import warnings
 
 from abc import ABC, abstractmethod
 
@@ -85,6 +86,34 @@ class RefcatInfo(ABC):
 
         return color_range
 
+    def get_mag_range(self, band):
+        """Get the appropriate magnitude range for a given band.
+
+        Parameters
+        ----------
+        band : `str`
+            Band to get magnitude range.
+
+        Returns
+        -------
+        mag_low, mag_high : `float`
+        """
+        return (-np.inf, np.inf)
+
+    def get_sn_range(self, band):
+        """Get the appropriate signal-to-noise range for a given band.
+
+        Parameters
+        ----------
+        band : `str`
+            Band to get signal-to-noise range.
+
+        Returns
+        -------
+        sn_low, sn_high : `float`
+        """
+        return (0.0, np.inf)
+
     def get_color_bands(self, band):
         """Get the appropriate bands to compute a color to correct
         a given band.
@@ -153,16 +182,30 @@ class RefcatInfo(ABC):
         mag_color = self.get_mag_colors(catalog, band)
         flux_field = self.get_flux_field(band)
         color_range = self.get_color_range(band)
+        mag_range = self.get_mag_range(band)
+        sn_range = self.get_sn_range(band)
 
         flux = np.array(catalog[flux_field])
+        flux_err = np.array(catalog[flux_field + "Err"])
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
 
-        selected = (
-            (mag_color > color_range[0])
-            & (mag_color < color_range[1])
-            & (np.isfinite(mag_color))
-            & (np.isfinite(flux))
-            & (flux < 1e10)
-        )
+            sn = flux / flux_err
+            mag = (flux*units.nJy).to_value(units.ABmag)
+
+            selected = (
+                (mag_color > color_range[0])
+                & (mag_color < color_range[1])
+                & (np.isfinite(mag_color))
+                & (np.isfinite(flux))
+                & (np.isfinite(sn))
+                & (np.isfinite(mag))
+                & (flux < 1e10)
+                & (mag > mag_range[0])
+                & (mag < mag_range[1])
+                & (sn > sn_range[0])
+                & (sn < sn_range[1])
+            )
 
         return selected
 
