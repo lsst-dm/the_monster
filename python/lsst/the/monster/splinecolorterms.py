@@ -7,7 +7,7 @@ import yaml
 import lsst.afw.math
 
 
-__all__ = ["ColortermSplineFitter", "ColortermSpline"]
+__all__ = ["ColortermSplineFitter", "MagSplineFitter", "ColortermSpline"]
 
 
 class ColortermSplineFitter:
@@ -74,13 +74,13 @@ class ColortermSplineFitter:
 
         Parameters
         ----------
-        pars : `np.ndarray`
-            Parameters of the polynomial + flux_offset.
+        pars : `np.ndarray` (M,)
+            Parameters of the spline + flux_offset.
         flux_source : `np.ndarray` (N,)
-            Source flux value.
+            Source flux values.
         mag_color : `np.ndarray` (N,)
             Magnitude colors of stars.
-        color_nodes : `np.ndarray` (N,)
+        color_nodes : `np.ndarray` (M,)
             Node locations.
 
         Returns
@@ -212,6 +212,126 @@ class ColortermSplineFitter:
         pars = np.concatenate([self._spline_pars, flux_offset_par])
 
         flux_model = self.apply_model(pars, self._flux_source, self._mag_color, self._color_nodes)
+
+        absdev = np.abs(self._flux_target - flux_model)
+        t = np.sum(absdev.astype(np.float64))
+
+        return t
+
+
+class MagSplineFitter:
+    """Fit flux offsets with splines as a function of magnitude using
+    median statistics.
+
+    The terms here can be run as an afterburner to correct source fluxes
+    to look like target fluxes over a wide range of magnitudes.  E.g.,
+    make PS1 (a source catalog) look like XP (the target catalog) up to
+    bright magnitudes.
+
+    Parameters
+    ----------
+    flux_target : `np.ndarray`
+        The flux array from the target catalog.
+    flux_source : `np.ndarray`
+        The flux array from the source catalog. These will be converted
+        to AB magnitudes (assuming nJy input).
+    mag_nodes : `np.ndarray`
+        Nodes to do magnitude offset fit.
+    """
+    def __init__(self, flux_target, flux_source, mag_nodes):
+        self._flux_target = flux_target
+        self._flux_source = flux_source
+        self._mag_nodes = mag_nodes
+
+    def estimate_p0(self):
+        """Estimate the initial fit parameters.
+
+        Returns
+        -------
+        p0 : `np.ndarray`
+            Estimate of initial fit parameters.
+        """
+        npt = len(self._mag_nodes)
+
+        p0 = np.zeros(npt)
+        p0[:] = np.median(self._flux_source/self._flux_target)
+
+        return p0
+
+    @staticmethod
+    def apply_model(pars, flux_source, mag_nodes):
+        """Apply the model and compute values.
+
+        Parameters
+        ----------
+        pars : `np.ndarray` (M,)
+            Parameters of the spline.
+        flux_source : `np.ndarray` (N,)
+            Source flux values.
+        mag_nodes : `np.ndarray` (M,)
+            Node locations.
+
+        Returns
+        -------
+        flux_model : `np.ndarray` (N,)
+            Model flux, after applying flux offsets to flux_source.
+        """
+        spl = lsst.afw.math.makeInterpolate(
+            mag_nodes,
+            pars,
+            lsst.afw.math.stringToInterpStyle("CUBIC_SPLINE"),
+        )
+        mag_source = (flux_source*units.nJy).to_value(units.ABmag)
+
+        flux_model = flux_source * np.array(spl.interpolate(mag_source))
+
+        return flux_model
+
+    def fit(self, p0):
+        """Perform the spline fit.
+
+        Parameters
+        ----------
+        p0 : `np.ndarray`
+            Initial fit parameters.
+
+        Returns
+        -------
+        pars : `np.ndarray`
+            Best-fit parameters.
+        """
+        res = scipy.optimize.minimize(
+            self.compute_cost_spline,
+            p0,
+            method="L-BFGS-B",
+            jac=False,
+            options={
+                "maxfun": 2000,
+                "maxiter": 2000,
+                "maxcor": 20,
+                "eps": 1e-3,
+                "ftol": 1e-15,
+                "gtol": 1e-15,
+            },
+        )
+        pars = res.x
+
+        return pars
+
+    def compute_cost_spline(self, spline_pars):
+        """Compute the median cost function for spline(pars).
+
+        Parameters
+        ----------
+        spline_pars : `np.ndarray`
+            Fit parameters.
+
+        Returns
+        -------
+        t : `float`
+            Median cost.
+        """
+        flux_model = self.apply_model(spline_pars, self._flux_source, self._mag_nodes)
 
         absdev = np.abs(self._flux_target - flux_model)
         t = np.sum(absdev.astype(np.float64))

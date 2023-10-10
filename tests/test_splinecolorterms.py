@@ -7,7 +7,7 @@ import tempfile
 
 import lsst.utils
 
-from lsst.the.monster import ColortermSplineFitter, ColortermSpline
+from lsst.the.monster import ColortermSplineFitter, ColortermSpline, MagSplineFitter
 
 
 class MonsterColortermSplineFitterTest(lsst.utils.tests.TestCase):
@@ -271,6 +271,73 @@ class MonsterColortermSplineTest(lsst.utils.tests.TestCase):
                 spline.save(filename)
 
             spline.save(filename, overwrite=True)
+
+
+class MonsterMagSpineFitterTest(lsst.utils.tests.TestCase):
+    def test_magsplinefitter(self):
+        n_star = 20_0000
+        n_nodes = 10
+
+        np.random.seed(12345)
+
+        mag_ref = np.random.uniform(12.0, 21.0, n_star)
+
+        nodes = np.linspace(12.0, 21.0, n_nodes)
+
+        node_values = np.array([0.1, 0.05, 0.03, 0.01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+
+        spl = lsst.afw.math.makeInterpolate(
+            nodes,
+            node_values,
+            lsst.afw.math.stringToInterpStyle("CUBIC_SPLINE"),
+        )
+        mag_meas = mag_ref + spl.interpolate(mag_ref)
+
+        mag_ref_scatter = mag_ref + np.random.normal(loc=0.0, scale=0.02, size=n_star)
+        mag_meas_scatter = mag_meas + np.random.normal(loc=0.0, scale=0.02, size=n_star)
+
+        # Add a couple of large outliers
+        mag_ref_scatter[0: 10] = 50.0
+        mag_meas_scatter[100: 110] = 50.0
+        non_outliers = np.ones(n_star, dtype=bool)
+        non_outliers[0: 10] = False
+        non_outliers[100: 110] = False
+
+        flux_ref_scatter = (mag_ref_scatter*units.ABmag).to_value(units.nJy)
+        flux_meas_scatter = (mag_meas_scatter*units.ABmag).to_value(units.nJy)
+
+        # Test the fitter.
+        fitter = MagSplineFitter(
+            flux_ref_scatter,
+            flux_meas_scatter,
+            nodes,
+        )
+        p0 = fitter.estimate_p0()
+        pars = fitter.fit(p0)
+
+        node_values_flux = 1.0 + node_values/1.086
+        self.assertFloatsAlmostEqual(pars, node_values_flux, rtol=0.01)
+
+        # Create the spline and apply it to correct the flux.
+        spl = lsst.afw.math.makeInterpolate(
+            nodes,
+            pars,
+            lsst.afw.math.stringToInterpStyle("CUBIC_SPLINE"),
+        )
+        flux_meas_scatter_corr = flux_meas_scatter * spl.interpolate(mag_meas_scatter)
+
+        # The tests are based on the ratio of corrected measured flux to
+        # reference flux.
+        ratio = flux_meas_scatter_corr / flux_ref_scatter
+
+        ratio_med = np.median(ratio[non_outliers])
+        ratio_sig = median_abs_deviation(ratio[non_outliers], scale="normal")
+
+        self.assertFloatsAlmostEqual(ratio_med, 1.0, rtol=2e-3)
+        self.assertLess(ratio_sig, 0.03)
+
+        n_4sig = (np.abs(ratio[non_outliers] - 1.0) > 4.0*ratio_sig).sum()
+        self.assertLess(n_4sig, 3e-4*n_star)
 
 
 class TestMemory(lsst.utils.tests.MemoryTestCase):
