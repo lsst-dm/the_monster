@@ -144,6 +144,9 @@ class MonsterColortermSplineTest(lsst.utils.tests.TestCase):
         self._values = np.ones(10)
         self._values[4: 6] = 1.1
         self._flux_offset = 1.0
+        self._mag_nodes = np.linspace(12.0, 20.0, 10)
+        self._mag_spline_values = np.ones(10)
+        self._mag_spline_values[0: 2] = 1.1
 
     def test_spline_apply(self):
         np.random.seed(12345)
@@ -179,6 +182,51 @@ class MonsterColortermSplineTest(lsst.utils.tests.TestCase):
         flux_target_compare = fitter.apply_model(pars, flux_source, colors, self._nodes)
 
         np.testing.assert_array_almost_equal(flux_target, flux_target_compare)
+
+    def test_spline_apply_with_mag(self):
+        np.random.seed(56789)
+
+        spline = ColortermSpline(
+            self._source_survey,
+            self._target_survey,
+            self._source_color_field_1,
+            self._source_color_field_2,
+            self._source_field,
+            self._nodes,
+            self._values,
+            flux_offset=self._flux_offset,
+            mag_nodes=self._mag_nodes,
+            mag_spline_values=self._mag_spline_values
+        )
+
+        n_star = 20_000
+        colors = np.random.uniform(0.5, 3.5, n_star)
+        mags = np.random.uniform(12.0, 20.0, n_star)
+
+        mag_1 = mags
+        flux_1 = (mags*units.ABmag).to_value(units.nJy)
+        mag_2 = mag_1 - colors
+        flux_2 = (mag_2*units.ABmag).to_value(units.nJy)
+
+        flux_source = flux_1
+        flux_target = spline.apply(flux_1, flux_2, flux_source)
+
+        mag_target = (flux_target*units.nJy).to_value(units.ABmag)
+
+        # Compare to what would come out of the spline fitter at
+        # faint magnitudes where there isn't an offset, to test
+        # for consistency.
+        fainter, = np.where(np.nan_to_num(mag_target) > 17.0)
+
+        fitter = ColortermSplineFitter(
+            colors[fainter],
+            flux_target[fainter],
+            flux_source[fainter],
+            self._nodes,
+        )
+        pars = np.concatenate([self._values, [self._flux_offset]])
+        flux_target_compare = fitter.apply_model(pars, flux_source[fainter], colors[fainter], self._nodes)
+        self.assertFloatsAlmostEqual(flux_target[fainter], flux_target_compare, rtol=0.001)
 
     def test_spline_apply_out_of_bounds(self):
         np.random.seed(12345)

@@ -360,6 +360,10 @@ class ColortermSpline:
         Array of spline values.
     flux_offset : `float`, optional
         Flux offset to apply in conversion.
+    mag_nodes : `np.ndarray` (M,), optional
+        Array of magnitude spline nodes for additional fixups.
+    mag_spline_values : `np.ndarray` (M,), optional
+        Array of magnitude spline values.
     """
     def __init__(
             self,
@@ -371,6 +375,9 @@ class ColortermSpline:
             nodes,
             spline_values,
             flux_offset=0.0,
+            mag_nodes=None,
+            mag_spline_values=None,
+
     ):
         self.source_survey = source_survey
         self.target_survey = target_survey
@@ -380,12 +387,23 @@ class ColortermSpline:
         self.nodes = np.array(nodes)
         self.spline_values = np.array(spline_values)
         self.flux_offset = flux_offset
+        self.mag_nodes = mag_nodes
+        self.mag_spline_values = mag_spline_values
 
         self.spline = lsst.afw.math.makeInterpolate(
             self.nodes,
             self.spline_values,
             lsst.afw.math.stringToInterpStyle("CUBIC_SPLINE"),
         )
+
+        if mag_nodes is not None:
+            self.mag_spline = lsst.afw.math.makeInterpolate(
+                self.mag_nodes,
+                self.mag_spline_values,
+                lsst.afw.math.stringToInterpStyle("CUBIC_SPLINE"),
+            )
+        else:
+            self.mag_spline = None
 
     def save(self, yaml_file, overwrite=False):
         """Serialize to a yaml file.
@@ -407,6 +425,10 @@ class ColortermSpline:
             "spline_values": [float(val) for val in self.spline_values],
             "flux_offset": float(self.flux_offset),
         }
+
+        if self.mag_nodes is not None:
+            yaml_dict["mag_nodes"] = [float(val) for val in self.mag_nodes]
+            yaml_dict["mag_spline_values"] = [float(val) for val in self.mag_spline_values]
 
         serialized = yaml.safe_dump(yaml_dict)
 
@@ -430,6 +452,13 @@ class ColortermSpline:
         with open(yaml_file, "rb") as fd:
             data = yaml.safe_load(fd)
 
+        if "mag_nodes" in data:
+            mag_nodes = data["mag_nodes"]
+            mag_spline_values = data["mag_spline_values"]
+        else:
+            mag_nodes = None
+            mag_spline_values = None
+
         return cls(
             data["source_survey"],
             data["target_survey"],
@@ -439,6 +468,8 @@ class ColortermSpline:
             data["nodes"],
             data["spline_values"],
             flux_offset=data["flux_offset"],
+            mag_nodes=mag_nodes,
+            mag_spline_values=mag_spline_values,
         )
 
     def apply(self, source_color_flux_1, source_color_flux_2, source_flux):
@@ -469,5 +500,15 @@ class ColortermSpline:
         # Check that things are in range.
         bad = ((mag_color < self.nodes[0]) | (mag_color > self.nodes[-1]))
         model_flux[bad] = np.nan
+
+        # Apply magnitude offsets if necessary.
+        if self.mag_spline is not None:
+            mag = np.nan_to_num((model_flux*units.nJy).to_value(units.ABmag))
+
+            model_flux *= np.array(self.mag_spline.interpolate(mag))
+
+            # Check that things are in range.
+            bad = ((mag < self.mag_nodes[0]) | (mag > self.mag_nodes[-1]) | ~np.isfinite(model_flux))
+            model_flux[bad] = np.nan
 
         return model_flux
