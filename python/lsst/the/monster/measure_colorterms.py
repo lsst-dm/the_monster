@@ -16,6 +16,7 @@ __all__ = [
     "SkyMapperSplineMeasurer",
     "PS1SplineMeasurer",
     "VSTSplineMeasurer",
+    "DESSplineMeasurer",
 ]
 
 
