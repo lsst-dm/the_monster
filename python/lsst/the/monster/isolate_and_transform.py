@@ -92,15 +92,15 @@ class MatchAndTransform:
                 cat_stars = read_stars(cat_info.path, [htmid], allow_missing=self.testing_mode)
 
                 # match with gaia_stars
-                with Matcher(gaia_stars["coord_ra"], gaia_stars["coord_dec"]) as m:
+                with Matcher(cat["coord_ra"], cat_stars["coord_dec"]) as m:
                     idx, i1, i2, d = m.query_knn(
-                        cat_stars["coord_ra"],
-                        cat_stars["coord_dec"],
+                        gaia_stars["coord_ra"],
+                        gaia_stars["coord_dec"],
                         distance_upper_bound=0.5/3600.0,
                         return_indices=True,
                     )
-                cat_stars = cat_stars[i2]
-                cat_stars.add_column(gaia_stars["id"][i1],
+                cat_stars = cat_stars[i1]
+                cat_stars.add_column(gaia_stars["id"][i2],
                                      name=self.gaia_reference_info.name + "_id")
 
                 for band in cat_info.bands:
