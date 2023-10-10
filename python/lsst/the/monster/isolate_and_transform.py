@@ -1,5 +1,6 @@
 import os
 from smatch import Matcher
+import numpy as np
 
 from lsst.pipe.tasks.isolatedStarAssociation import IsolatedStarAssociationTask
 import lsst.utils
@@ -129,6 +130,12 @@ class MatchAndTransform:
                                          name=f"decam_{band}_from_{cat_info.name}_flux")
                     cat_stars.add_column(model_flux_err,
                                          name=f"decam_{band}_from_{cat_info.name}_fluxErr")
+
+                    # Apply selection to ensure that only useful stars have
+                    # transformations.
+                    selected = cat_info.select_stars(cat_stars, band)
+                    cat_stars[f"decam_{band}_from_{cat_info.name}_flux"][selected] = np.nan
+                    cat_stars[f"decam_{band}_from_{cat_info.name}_fluxErr"][selected] = np.nan
 
                 if self.write_path_inp is None:
                     write_path = cat_info.write_path
