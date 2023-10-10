@@ -271,6 +271,8 @@ class MonsterColortermSplineTest(lsst.utils.tests.TestCase):
             self._nodes,
             self._values,
             flux_offset=self._flux_offset,
+            mag_nodes=self._mag_nodes,
+            mag_spline_values=self._mag_spline_values,
         )
 
         self.assertEqual(spline.source_survey, self._source_survey)
@@ -281,6 +283,8 @@ class MonsterColortermSplineTest(lsst.utils.tests.TestCase):
         np.testing.assert_array_almost_equal(spline.nodes, self._nodes)
         np.testing.assert_array_almost_equal(spline.spline_values, self._values)
         self.assertEqual(spline.flux_offset, self._flux_offset)
+        np.testing.assert_array_almost_equal(spline.mag_nodes, self._mag_nodes)
+        np.testing.assert_array_almost_equal(spline.mag_spline_values, self._mag_spline_values)
 
         with tempfile.TemporaryDirectory() as temp_dir:
             filename = os.path.join(temp_dir, "test.yaml")
@@ -297,6 +301,8 @@ class MonsterColortermSplineTest(lsst.utils.tests.TestCase):
         np.testing.assert_array_almost_equal(spline2.nodes, spline.nodes)
         np.testing.assert_array_almost_equal(spline2.spline_values, spline.spline_values)
         self.assertEqual(spline2.flux_offset, spline.flux_offset)
+        np.testing.assert_array_almost_equal(spline2.mag_nodes, self._mag_nodes)
+        np.testing.assert_array_almost_equal(spline2.mag_spline_values, self._mag_spline_values)
 
     def test_spline_overwrite(self):
         spline = ColortermSpline(
