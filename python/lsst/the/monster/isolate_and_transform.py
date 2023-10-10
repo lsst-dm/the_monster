@@ -4,7 +4,7 @@ from smatch import Matcher
 from lsst.pipe.tasks.isolatedStarAssociation import IsolatedStarAssociationTask
 import lsst.utils
 from .splinecolorterms import ColortermSpline
-from .refcats import GaiaXPInfo, GaiaDR3Info, SkyMapperInfo, PS1Info, VSTInfo
+from .refcats import DESInfo, GaiaXPInfo, GaiaDR3Info, PS1Info, SkyMapperInfo, VSTInfo
 from .utils import read_stars, makeRefSchema, makeRefCat
 
 __all__ = ["MatchAndTransform"]
@@ -41,8 +41,8 @@ class MatchAndTransform:
 
     def __init__(self,
                  gaia_reference_class=GaiaDR3Info,
-                 catalog_info_class_list=[GaiaXPInfo, SkyMapperInfo,
-                                          PS1Info, VSTInfo],
+                 catalog_info_class_list=[DESInfo, GaiaXPInfo, 
+                                          PS1Info, SkyMapperInfo, VSTInfo],
                  write_path_inp=None,
                  testing_mode=False,
                  ):
