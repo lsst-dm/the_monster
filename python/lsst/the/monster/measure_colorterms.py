@@ -233,7 +233,19 @@ class SplineMeasurer:
 
                 good = (np.isfinite(model_flux) & np.isfinite(mag_offset_model_flux))
 
-                mag_nodes = np.linspace(model_mag[good].min(), model_mag[good].max(), self.n_mag_nodes)
+                # Magnitude nodes should cover the overlap range of the
+                # two catalogs.
+                mag_node_range1 = cat_info.get_mag_range(band)
+                mag_node_range2 = mag_offset_cat_info.get_mag_range(band)
+                mag_node_range = [max(mag_node_range1[0], mag_node_range2[0]),
+                                  min(mag_node_range1[1], mag_node_range2[1])]
+                # And if both are unlimited we check here.
+                if not np.isfinite(mag_node_range[0]):
+                    mag_node_range[0] = np.min(model_mag[good])
+                if not np.isfinite(mag_node_range[1]):
+                    mag_node_range[1] = np.max(model_mag[good])
+
+                mag_nodes = np.linspace(mag_node_range[0], mag_node_range[1], self.n_mag_nodes)
 
                 mag_fitter = MagSplineFitter(
                     np.array(mag_offset_model_flux[good]),
