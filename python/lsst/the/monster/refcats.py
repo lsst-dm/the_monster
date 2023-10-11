@@ -200,8 +200,11 @@ class RefcatInfo(ABC):
         flux_color_field_1 = self.get_flux_field(band_1)
         flux_color_field_2 = self.get_flux_field(band_2)
 
-        mag_color_1 = (np.array(catalog[flux_color_field_1])*units.nJy).to_value(units.ABmag)
-        mag_color_2 = (np.array(catalog[flux_color_field_2])*units.nJy).to_value(units.ABmag)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            mag_color_1 = (np.array(catalog[flux_color_field_1])*units.nJy).to_value(units.ABmag)
+            mag_color_2 = (np.array(catalog[flux_color_field_2])*units.nJy).to_value(units.ABmag)
+
         mag_color = mag_color_1 - mag_color_2
 
         return mag_color
@@ -230,7 +233,7 @@ class RefcatInfo(ABC):
         flux = np.array(catalog[flux_field])
         flux_err = np.array(catalog[flux_field + "Err"])
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+            warnings.simplefilter("ignore", RuntimeWarning)
 
             sn = flux / flux_err
             mag = (flux*units.nJy).to_value(units.ABmag)
