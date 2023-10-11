@@ -201,7 +201,8 @@ class SplineMeasurer:
             mag_spline_values = None
 
             if self.fit_mag_offsets:
-                print(f"Working on transformations from {cat_info.name} to {des_info.name} for {band}")
+                print(f"Working on magnitude offsets from {cat_info.name} to "
+                      f"{mag_offset_cat_info.name} for {band}")
                 # We use the matched2 catalogs to apply color terms and fit
                 # any residual magnitude spline offsets. This is primarily for
                 # the bright end, comparing PS1 and XP.
