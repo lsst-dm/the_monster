@@ -235,7 +235,7 @@ class SplineMeasurer:
 
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
-                    model_mag = (model_flux.quantity).to_value(units.ABmag)
+                    model_mag = (model_flux*units.nJy).to_value(units.ABmag)
 
                 good = (np.isfinite(model_flux) & np.isfinite(mag_offset_model_flux))
 
