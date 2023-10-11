@@ -133,6 +133,13 @@ class MatchAndTransform:
                     cat_stars[f"decam_{band}_from_{cat_info.name}_flux"][~selected] = np.nan
                     cat_stars[f"decam_{band}_from_{cat_info.name}_fluxErr"][~selected] = np.nan
 
+                # If any stars are nans in all transformed filters, they should
+                # be removed.
+                n_measurements = np.zeros(len(cat_stars))
+                for band in cat_info.bands:
+                    n_measurements[np.isfinite(cat_stars[f"decam_{band}_from_{cat_info.name}_flux"])] += 1
+                cat_stars = cat_stars[n_measurements > 0]
+
                 if self.write_path_inp is None:
                     write_path = cat_info.write_path
                 else:

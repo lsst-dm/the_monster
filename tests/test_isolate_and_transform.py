@@ -63,7 +63,7 @@ class MonsterMatchAndTransformTest(lsst.utils.tests.TestCase):
             output = afw.table.SimpleCatalog.readFits(fits_path)
 
             # Check the output.
-            self.assertEqual(len(output), 347)
+            self.assertEqual(len(output), 326)
             self.assertEqual(output.schema.getOrderedNames(), self.outputColumns)
 
             # Check that the positions are the same for this catalog and Gaia
