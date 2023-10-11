@@ -497,7 +497,8 @@ class ColortermSpline:
         model_flux = source_flux * np.array(self.spline.interpolate(mag_color))
         model_flux -= self.flux_offset
 
-        # Check that things are in range.
+        # Check that things are in range: colors out of range simply should
+        # not be corrected.
         bad = ((mag_color < self.nodes[0]) | (mag_color > self.nodes[-1]))
         model_flux[bad] = np.nan
 
@@ -505,10 +506,12 @@ class ColortermSpline:
         if self.mag_spline is not None:
             mag = np.nan_to_num((model_flux*units.nJy).to_value(units.ABmag))
 
-            model_flux *= np.array(self.mag_spline.interpolate(mag))
+            flux_offset = np.array(self.mag_spline.interpolate(mag))
 
-            # Check that things are in range.
-            bad = ((mag < self.mag_nodes[0]) | (mag > self.mag_nodes[-1]) | ~np.isfinite(model_flux))
-            model_flux[bad] = np.nan
+            # Set the offsets for those out of range to the last node value.
+            flux_offset[mag < self.mag_nodes[0]] = self.mag_spline_values[0]
+            flux_offset[mag > self.mag_nodes[-1]] = self.mag_spline_values[-1]
+
+            model_flux *= flux_offset
 
         return model_flux
