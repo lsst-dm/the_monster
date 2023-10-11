@@ -2,10 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from smatch import Matcher
 import warnings
+from astropy import units
 
 from lsst.sphgeom import Box, HtmPixelization
 
-from .splinecolorterms import ColortermSplineFitter, ColortermSpline
+from .splinecolorterms import ColortermSplineFitter, ColortermSpline, MagSplineFitter
 from .refcats import GaiaXPInfo, GaiaDR3Info, DESInfo, SkyMapperInfo, PS1Info, VSTInfo
 from .utils import read_stars
 
@@ -25,10 +26,17 @@ class SplineMeasurer:
     TargetCatInfoClass = DESInfo
     GaiaCatInfoClass = GaiaDR3Info
 
+    fit_mag_offsets = False
+    MagOffsetCatInfoClass = None
+
     testing_mode = False
 
     @property
     def n_nodes(self):
+        return 10
+
+    @property
+    def n_mag_nodes(self):
         return 10
 
     @property
@@ -99,7 +107,6 @@ class SplineMeasurer:
         des_stars = des_stars[i1]
 
         # Now the actual running.
-        # cat_info = self.get_cat_info()
         cat_info = self.CatInfoClass()
 
         cat_stars = read_stars(cat_info.path, indices, allow_missing=self.testing_mode)
@@ -112,21 +119,50 @@ class SplineMeasurer:
                 return_indices=True,
             )
 
-        des_stars = des_stars[i1]
-        cat_stars = cat_stars[i2]
+        des_stars_matched = des_stars[i1]
+        cat_stars_matched = cat_stars[i2]
+
+        if self.fit_mag_offsets:
+            mag_offset_cat_info = self.MagOffsetCatInfoClass()
+            mag_offset_cat_stars = read_stars(
+                mag_offset_cat_info.path,
+                indices,
+                allow_missing=self.testing_mode,
+            )
+
+            with Matcher(mag_offset_cat_stars["coord_ra"], mag_offset_cat_stars["coord_dec"]) as m:
+                idx, i1, i2, d = m.query_knn(
+                    gaia_stars["coord_ra"],
+                    gaia_stars["coord_dec"],
+                    distance_upper_bound=0.5/3600.0,
+                    return_indices=True,
+                )
+
+            mag_offset_cat_stars = mag_offset_cat_stars[i1]
+
+            with Matcher(mag_offset_cat_stars["coord_ra"], mag_offset_cat_stars["coord_dec"]) as m:
+                idx, i1, i2, d = m.query_knn(
+                    cat_stars["coord_ra"],
+                    cat_stars["coord_dec"],
+                    distance_upper_bound=0.5/3600.0,
+                    return_indices=True,
+                )
+
+            mag_offset_cat_stars_matched2 = mag_offset_cat_stars[i1]
+            cat_stars_matched2 = cat_stars[i2]
 
         yaml_files = []
 
         for band in bands:
-            mag_color = cat_info.get_mag_colors(cat_stars, band)
-            flux_des = des_stars[des_info.get_flux_field(band)]
-            flux_cat = cat_stars[cat_info.get_flux_field(band)]
+            mag_color = cat_info.get_mag_colors(cat_stars_matched, band)
+            flux_des = des_stars_matched[des_info.get_flux_field(band)]
+            flux_cat = cat_stars_matched[cat_info.get_flux_field(band)]
 
             color_range = cat_info.get_color_range(band)
 
             nodes = np.linspace(color_range[0], color_range[1], self.n_nodes)
 
-            selected = cat_info.select_stars(cat_stars, band)
+            selected = cat_info.select_stars(cat_stars_matched, band)
 
             fitter = ColortermSplineFitter(
                 mag_color[selected],
@@ -148,8 +184,7 @@ class SplineMeasurer:
                 spline_values = pars
                 flux_offset = 0.0
 
-            # Create an spline object to serialize it.
-            colorterm = ColortermSpline(
+            colorterm_init = ColortermSpline(
                 cat_info.name,
                 des_info.name,
                 cat_info.get_flux_field(band_1),
@@ -160,6 +195,68 @@ class SplineMeasurer:
                 flux_offset=flux_offset,
             )
 
+            mag_nodes = None
+            mag_spline_values = None
+
+            if self.fit_mag_offsets:
+                # We use the matched2 catalogs to apply color terms and fit
+                # any residual magnitude spline offsets. This is primarily for
+                # the bright end, comparing PS1 and XP.
+
+                flux_cat2 = cat_stars_matched2[cat_info.get_flux_field(band)]
+
+                # We need to apply the color term, to the matched2 catalog.
+                model_flux = colorterm_init.apply(
+                    cat_stars_matched2[cat_info.get_flux_field(band_1)],
+                    cat_stars_matched2[cat_info.get_flux_field(band_2)],
+                    flux_cat2,
+                )
+
+                selected2 = cat_info.select_stars(cat_stars_matched2, band)
+                model_flux[~selected2] = np.nan
+
+                # Next, we need to apply color terms to the mag offset catalog.
+                filename = mag_offset_cat_info.colorterm_file(band)
+                mag_offset_colorterm = ColortermSpline.load(filename)
+
+                flux_mag_offset_cat = mag_offset_cat_stars_matched2[mag_offset_cat_info.get_flux_field(band)]
+                mag_offset_model_flux = mag_offset_colorterm.apply(
+                    mag_offset_cat_stars_matched2[mag_offset_cat_info.get_flux_field(band_1)],
+                    mag_offset_cat_stars_matched2[mag_offset_cat_info.get_flux_field(band_2)],
+                    flux_mag_offset_cat,
+                )
+
+                selected_mag_offset = mag_offset_cat_info.select_stars(mag_offset_cat_stars_matched2, band)
+                mag_offset_model_flux[~selected_mag_offset] = np.nan
+
+                model_mag = (model_flux.quantity).to_value(units.ABmag)
+
+                good = (np.isfinite(model_flux) & np.isfinite(mag_offset_model_flux))
+
+                mag_nodes = np.linspace(model_mag[good].min(), model_mag[good].max(), self.n_mag_nodes)
+
+                mag_fitter = MagSplineFitter(
+                    np.array(mag_offset_model_flux[good]),
+                    np.array(model_flux[good]),
+                    mag_nodes,
+                )
+                mag_p0 = mag_fitter.estimate_p0()
+                mag_spline_values = mag_fitter.fit(mag_p0)
+
+            # Create an spline object to serialize it.
+            colorterm = ColortermSpline(
+                cat_info.name,
+                des_info.name,
+                cat_info.get_flux_field(band_1),
+                cat_info.get_flux_field(band_2),
+                cat_info.get_flux_field(band),
+                nodes,
+                spline_values,
+                flux_offset=flux_offset,
+                mag_nodes=mag_nodes,
+                mag_spline_values=mag_spline_values,
+            )
+
             yaml_file = f"{cat_info.name}_to_{des_info.name}_band_{band}.yaml"
             colorterm.save(yaml_file, overwrite=overwrite)
 
@@ -167,7 +264,7 @@ class SplineMeasurer:
 
             # Create QA plots if desired.
             if do_plots:
-                ratio_extent = np.percentile(flux_cat[selected]/flux_des[selected], [0.5, 99.5])
+                ratio_extent = np.nanpercentile(flux_cat[selected]/flux_des[selected], [0.5, 99.5])
 
                 xlabel = f"{band_1} - {band_2}"
                 ylabel = f"{cat_info.name}_{band}/{des_info.name}_{band}"
@@ -179,7 +276,7 @@ class SplineMeasurer:
                 plt.hexbin(
                     mag_color[selected],
                     (flux_cat[selected] - flux_offset)/flux_des[selected],
-                    bins='log',
+                    bins="log",
                     extent=[color_range[0], color_range[1], ratio_extent[0], ratio_extent[1]],
                 )
                 plt.plot(xvals, yvals, "r-")
@@ -192,17 +289,17 @@ class SplineMeasurer:
                 plt.savefig(f"{cat_info.name}_to_{des_info.name}_band_{band}_color_term.png")
 
                 flux_target_corr = colorterm.apply(
-                    cat_stars[cat_info.get_flux_field(band_1)],
-                    cat_stars[cat_info.get_flux_field(band_2)],
-                    flux_cat,
+                    np.array(cat_stars_matched[cat_info.get_flux_field(band_1)]),
+                    np.array(cat_stars_matched[cat_info.get_flux_field(band_2)]),
+                    np.array(flux_cat),
                 )
                 resid = (flux_target_corr[selected] - flux_des[selected])/flux_des[selected]
 
-                resid_extent = np.percentile(resid, [0.5, 99.5])
+                resid_extent = np.nanpercentile(resid, [0.5, 99.5])
 
                 xlabel2 = f"log10({cat_info.name} {band})"
 
-                flux_extent = np.percentile(np.log10(flux_des[selected]), [0.5, 99.5])
+                flux_extent = np.nanpercentile(np.log10(flux_des[selected]), [0.5, 99.5])
 
                 plt.clf()
                 plt.hexbin(
@@ -220,6 +317,29 @@ class SplineMeasurer:
                     plt.tight_layout()
                 plt.savefig(f"{cat_info.name}_to_{des_info.name}_band_{band}_flux_residuals.png")
 
+                # Additional plots for magnitude offset pars.
+                if self.fit_mag_offsets:
+                    xvals = np.linspace(mag_nodes[0], mag_nodes[-1], 1000)
+                    yvals = 1./np.array(colorterm.mag_spline.interpolate(xvals))
+
+                    ratio_extent = np.nanpercentile(model_flux[good]/mag_offset_model_flux[good], [0.5, 99.5])
+
+                    plt.clf()
+                    plt.hexbin(
+                        model_mag[good],
+                        model_flux[good]/mag_offset_model_flux[good],
+                        bins="log",
+                        extent=[mag_nodes[0], mag_nodes[-1], ratio_extent[0], ratio_extent[1]],
+                    )
+                    plt.plot(xvals, yvals, "r-")
+                    plt.xlabel(f"{band}")
+                    plt.ylabel(f"{cat_info.name}_{band}/{mag_offset_cat_info.name}_{band}")
+                    plt.title(f"{cat_info.name} Magnitude Residual Term")
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore", UserWarning)
+                        plt.tight_layout()
+                    plt.savefig(f"{cat_info.name}_vs_{mag_offset_cat_info.name}_band_{band}_mag_offset.png")
+
         return yaml_files
 
 
@@ -233,6 +353,9 @@ class SkyMapperSplineMeasurer(SplineMeasurer):
 
 class PS1SplineMeasurer(SplineMeasurer):
     CatInfoClass = PS1Info
+
+    fit_mag_offsets = True
+    MagOffsetCatInfoClass = GaiaXPInfo
 
 
 class VSTSplineMeasurer(SplineMeasurer):

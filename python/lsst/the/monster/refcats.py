@@ -1,6 +1,8 @@
+import os
 import numpy as np
 from astropy import units
 import warnings
+import lsst.utils
 
 from abc import ABC, abstractmethod
 
@@ -12,6 +14,7 @@ class RefcatInfo(ABC):
     PATH = ""
     WRITE_PATH = None
     NAME = ""
+    COLORTERM_PATH = None
 
     def __init__(self, path=None, write_path=None, name=None):
         if path is None:
@@ -27,6 +30,14 @@ class RefcatInfo(ABC):
         else:
             self._write_path = write_path
 
+        if self.COLORTERM_PATH is None:
+            self._colorterm_path = os.path.join(
+                lsst.utils.getPackageDir("the_monster"),
+                "colorterms",
+            )
+        else:
+            self._colorterm_path = self.COLORTERM_PATH
+
         if name is None:
             self._name = self.NAME
         else:
@@ -39,6 +50,24 @@ class RefcatInfo(ABC):
     @property
     def write_path(self):
         return self._write_path
+
+    def colorterm_file(self, band):
+        """Get the colorterm correction file for this band/catalog.
+
+        Parameters
+        ----------
+        band : `str`
+
+        Returns
+        -------
+        filename : `str`
+        """
+        filename = os.path.join(
+            self._colorterm_path,
+            f"{self.name}_to_DES_band_{band}.yaml",
+        )
+
+        return filename
 
     @property
     def name(self):

@@ -3,7 +3,6 @@ from smatch import Matcher
 import numpy as np
 
 from lsst.pipe.tasks.isolatedStarAssociation import IsolatedStarAssociationTask
-import lsst.utils
 from .splinecolorterms import ColortermSpline
 from .refcats import GaiaXPInfo, GaiaDR3Info, SkyMapperInfo, PS1Info, VSTInfo
 from .utils import read_stars, makeRefSchema, makeRefCat
@@ -106,10 +105,7 @@ class MatchAndTransform:
                 for band in cat_info.bands:
                     # yaml spline fits are per-band, so loop over bands
                     # read in spline
-                    filename = os.path.join(lsst.utils.getPackageDir("the_monster"),
-                                            "colorterms/",
-                                            f"{cat_info.name}_to_DES_band_{band}.yaml")
-
+                    filename = cat_info.colorterm_file(band)
                     colorterm_spline = ColortermSpline.load(filename)
 
                     # apply colorterms to transform to des mag
@@ -134,8 +130,8 @@ class MatchAndTransform:
                     # Apply selection to ensure that only useful stars have
                     # transformations.
                     selected = cat_info.select_stars(cat_stars, band)
-                    cat_stars[f"decam_{band}_from_{cat_info.name}_flux"][selected] = np.nan
-                    cat_stars[f"decam_{band}_from_{cat_info.name}_fluxErr"][selected] = np.nan
+                    cat_stars[f"decam_{band}_from_{cat_info.name}_flux"][~selected] = np.nan
+                    cat_stars[f"decam_{band}_from_{cat_info.name}_fluxErr"][~selected] = np.nan
 
                 if self.write_path_inp is None:
                     write_path = cat_info.write_path
