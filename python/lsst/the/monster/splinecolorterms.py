@@ -3,6 +3,7 @@ import numpy as np
 import scipy.optimize
 from astropy import units
 import yaml
+import warnings
 
 import lsst.afw.math
 
@@ -489,22 +490,26 @@ class ColortermSpline:
         model_flux : `np.ndarray` (N,)
             Array of fluxes converted to target.
         """
-        mag_1 = (np.array(source_color_flux_1)*units.nJy).to_value(units.ABmag)
-        mag_2 = (np.array(source_color_flux_2)*units.nJy).to_value(units.ABmag)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            mag_1 = (np.array(source_color_flux_1)*units.nJy).to_value(units.ABmag)
+            mag_2 = (np.array(source_color_flux_2)*units.nJy).to_value(units.ABmag)
 
         mag_color = mag_1 - mag_2
 
-        model_flux = source_flux * np.array(self.spline.interpolate(mag_color))
+        model_flux = np.array(source_flux) * np.array(self.spline.interpolate(mag_color))
         model_flux -= self.flux_offset
 
         # Check that things are in range: colors out of range simply should
         # not be corrected.
-        bad = ((mag_color < self.nodes[0]) | (mag_color > self.nodes[-1]))
+        bad = ((mag_color < self.nodes[0]) | (mag_color > self.nodes[-1]) | (~np.isfinite(mag_color)))
         model_flux[bad] = np.nan
 
         # Apply magnitude offsets if necessary.
         if self.mag_spline is not None:
-            mag = np.nan_to_num((model_flux*units.nJy).to_value(units.ABmag))
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", RuntimeWarning)
+                mag = np.nan_to_num((model_flux*units.nJy).to_value(units.ABmag))
 
             flux_offset = np.array(self.mag_spline.interpolate(mag))
 
