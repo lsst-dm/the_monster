@@ -297,18 +297,19 @@ class SplineMeasurer:
 
                 resid_extent = np.nanpercentile(resid, [0.5, 99.5])
 
-                xlabel2 = f"log10({cat_info.name} {band})"
+                xlabel2 = f"mag_{band} ({cat_info.name})"
 
-                flux_extent = np.nanpercentile(np.log10(flux_des[selected]), [0.5, 99.5])
+                mag_des_selected = (np.array(flux_des[selected])*units.nJy).to_value(units.ABmag)
+                mag_extent = np.nanpercentile(mag_des_selected, [0.5, 99.5])
 
                 plt.clf()
                 plt.hexbin(
-                    np.log10(flux_des[selected]),
+                    mag_des_selected,
                     resid,
                     bins='log',
-                    extent=[flux_extent[0], flux_extent[1], resid_extent[0], resid_extent[1]],
+                    extent=[mag_extent[0], mag_extent[1], resid_extent[0], resid_extent[1]],
                 )
-                plt.plot(flux_extent, [0, 0], 'r:')
+                plt.plot(mag_extent, [0, 0], 'r:')
                 plt.xlabel(xlabel2)
                 plt.ylabel(ylabel + " - model")
                 plt.title(f"{cat_info.name} {band} flux residuals")
