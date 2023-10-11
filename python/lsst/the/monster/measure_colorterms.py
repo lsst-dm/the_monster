@@ -232,7 +232,9 @@ class SplineMeasurer:
                 selected_mag_offset = mag_offset_cat_info.select_stars(mag_offset_cat_stars_matched2, band)
                 mag_offset_model_flux[~selected_mag_offset] = np.nan
 
-                model_mag = (model_flux.quantity).to_value(units.ABmag)
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    model_mag = (model_flux.quantity).to_value(units.ABmag)
 
                 good = (np.isfinite(model_flux) & np.isfinite(mag_offset_model_flux))
 
