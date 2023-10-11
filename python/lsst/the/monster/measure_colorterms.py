@@ -154,6 +154,7 @@ class SplineMeasurer:
         yaml_files = []
 
         for band in bands:
+            print(f"Working on transformations from {cat_info.name} to {des_info.name} for {band}")
             mag_color = cat_info.get_mag_colors(cat_stars_matched, band)
             flux_des = des_stars_matched[des_info.get_flux_field(band)]
             flux_cat = cat_stars_matched[cat_info.get_flux_field(band)]
@@ -163,6 +164,7 @@ class SplineMeasurer:
             nodes = np.linspace(color_range[0], color_range[1], self.n_nodes)
 
             selected = cat_info.select_stars(cat_stars_matched, band)
+            selected &= des_info.select_stars(des_stars_matched, band)
 
             fitter = ColortermSplineFitter(
                 mag_color[selected],
@@ -199,6 +201,7 @@ class SplineMeasurer:
             mag_spline_values = None
 
             if self.fit_mag_offsets:
+                print(f"Working on transformations from {cat_info.name} to {des_info.name} for {band}")
                 # We use the matched2 catalogs to apply color terms and fit
                 # any residual magnitude spline offsets. This is primarily for
                 # the bright end, comparing PS1 and XP.
