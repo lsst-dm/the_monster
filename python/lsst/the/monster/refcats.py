@@ -411,7 +411,7 @@ class PS1Info(RefcatInfo):
         elif band == "z":
             return (13.75, 19.0)
         elif band == "y":
-            return (13.75, 18.0)
+            return (13.75, 17.0)
         else:
             return (-np.inf, np.inf)
 
