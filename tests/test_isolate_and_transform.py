@@ -18,21 +18,20 @@ class MonsterMatchAndTransformTest(lsst.utils.tests.TestCase):
     def setUp(self):
         self.GaiaDR3CatInfoClass = GaiaDR3InfoTester
         self.TargetCatInfoClass = GaiaXPInfoTester
-        self.TargetCatInfoClass.name = "GaiaXP"
         self.outputColumns = ['id',
                               'coord_ra',
                               'coord_dec',
                               'TestGaiaDR3_id',
-                              'decam_g_from_GaiaXP_flux',
-                              'decam_g_from_GaiaXP_fluxErr',
-                              'decam_r_from_GaiaXP_flux',
-                              'decam_r_from_GaiaXP_fluxErr',
-                              'decam_i_from_GaiaXP_flux',
-                              'decam_i_from_GaiaXP_fluxErr',
-                              'decam_z_from_GaiaXP_flux',
-                              'decam_z_from_GaiaXP_fluxErr',
-                              'decam_y_from_GaiaXP_flux',
-                              'decam_y_from_GaiaXP_fluxErr']
+                              'decam_g_from_TestGaiaXP_flux',
+                              'decam_g_from_TestGaiaXP_fluxErr',
+                              'decam_r_from_TestGaiaXP_flux',
+                              'decam_r_from_TestGaiaXP_fluxErr',
+                              'decam_i_from_TestGaiaXP_flux',
+                              'decam_i_from_TestGaiaXP_fluxErr',
+                              'decam_z_from_TestGaiaXP_flux',
+                              'decam_z_from_TestGaiaXP_fluxErr',
+                              'decam_y_from_TestGaiaXP_flux',
+                              'decam_y_from_TestGaiaXP_fluxErr']
 
     def test_MatchAndTransform(self):
         """
