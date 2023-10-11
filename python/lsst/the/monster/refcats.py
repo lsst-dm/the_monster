@@ -283,6 +283,20 @@ class GaiaXPInfo(RefcatInfo):
     def get_imz_color_range(self):
         return (0.0, 0.7)
 
+    def get_mag_range(self, band):
+        if band == "g":
+            return (-np.inf, 19.3)
+        elif band == "r":
+            return (-np.inf, 18.0)
+        elif band == "i":
+            return (-np.inf, 17.5)
+        elif band == "z":
+            return (-np.inf, 17.5)
+        elif band == "y":
+            return (-np.inf, 17.4)
+        else:
+            return (-np.inf, np.inf)
+
 
 class DESInfo(RefcatInfo):
     PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/des_y6_calibration_stars_20230511"
