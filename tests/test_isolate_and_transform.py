@@ -1,3 +1,4 @@
+import unittest
 import esutil
 import numpy as np
 import os
@@ -8,30 +9,29 @@ import lsst.utils
 
 from lsst.the.monster import MatchAndTransform
 from lsst.the.monster.utils import read_stars
-from test_catalog_measurement import TestGaiaDR3Info, TestGaiaXPInfo
+from test_catalog_measurement import GaiaDR3InfoTester, GaiaXPInfoTester
 
 ROOT = os.path.abspath(os.path.dirname(__file__))
 
 
 class MonsterMatchAndTransformTest(lsst.utils.tests.TestCase):
     def setUp(self):
-        self.GaiaDR3CatInfoClass = TestGaiaDR3Info
-        self.TargetCatInfoClass = TestGaiaXPInfo
-        self.TargetCatInfoClass.name = "GaiaXP"
+        self.GaiaDR3CatInfoClass = GaiaDR3InfoTester
+        self.TargetCatInfoClass = GaiaXPInfoTester
         self.outputColumns = ['id',
                               'coord_ra',
                               'coord_dec',
                               'TestGaiaDR3_id',
-                              'decam_g_from_GaiaXP_flux',
-                              'decam_g_from_GaiaXP_fluxErr',
-                              'decam_r_from_GaiaXP_flux',
-                              'decam_r_from_GaiaXP_fluxErr',
-                              'decam_i_from_GaiaXP_flux',
-                              'decam_i_from_GaiaXP_fluxErr',
-                              'decam_z_from_GaiaXP_flux',
-                              'decam_z_from_GaiaXP_fluxErr',
-                              'decam_y_from_GaiaXP_flux',
-                              'decam_y_from_GaiaXP_fluxErr']
+                              'decam_g_from_TestGaiaXP_flux',
+                              'decam_g_from_TestGaiaXP_fluxErr',
+                              'decam_r_from_TestGaiaXP_flux',
+                              'decam_r_from_TestGaiaXP_fluxErr',
+                              'decam_i_from_TestGaiaXP_flux',
+                              'decam_i_from_TestGaiaXP_fluxErr',
+                              'decam_z_from_TestGaiaXP_flux',
+                              'decam_z_from_TestGaiaXP_fluxErr',
+                              'decam_y_from_TestGaiaXP_flux',
+                              'decam_y_from_TestGaiaXP_fluxErr']
 
     def test_MatchAndTransform(self):
         """
@@ -63,7 +63,7 @@ class MonsterMatchAndTransformTest(lsst.utils.tests.TestCase):
             output = afw.table.SimpleCatalog.readFits(fits_path)
 
             # Check the output.
-            self.assertEqual(len(output), 347)
+            self.assertEqual(len(output), 326)
             self.assertEqual(output.schema.getOrderedNames(), self.outputColumns)
 
             # Check that the positions are the same for this catalog and Gaia
@@ -80,3 +80,12 @@ class MonsterMatchAndTransformTest(lsst.utils.tests.TestCase):
                                                  np.rad2deg(output['coord_ra'][b]))
             np.testing.assert_array_almost_equal(gaia_stars_all[a]['coord_dec'],
                                                  np.rad2deg(output['coord_dec'][b]))
+
+
+def setup_module(module):
+    lsst.utils.tests.init()
+
+
+if __name__ == "__main__":
+    lsst.utils.tests.init()
+    unittest.main()

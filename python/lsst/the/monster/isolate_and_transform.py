@@ -1,8 +1,8 @@
 import os
 from smatch import Matcher
+import numpy as np
 
 from lsst.pipe.tasks.isolatedStarAssociation import IsolatedStarAssociationTask
-import lsst.utils
 from .splinecolorterms import ColortermSpline
 from .refcats import GaiaXPInfo, GaiaDR3Info, SkyMapperInfo, PS1Info, VSTInfo
 from .utils import read_stars, makeRefSchema, makeRefCat
@@ -91,24 +91,21 @@ class MatchAndTransform:
                 cat_stars = read_stars(cat_info.path, [htmid], allow_missing=self.testing_mode)
 
                 # match with gaia_stars
-                with Matcher(gaia_stars["coord_ra"], gaia_stars["coord_dec"]) as m:
+                with Matcher(cat_stars["coord_ra"], cat_stars["coord_dec"]) as m:
                     idx, i1, i2, d = m.query_knn(
-                        cat_stars["coord_ra"],
-                        cat_stars["coord_dec"],
+                        gaia_stars["coord_ra"],
+                        gaia_stars["coord_dec"],
                         distance_upper_bound=0.5/3600.0,
                         return_indices=True,
                     )
-                cat_stars = cat_stars[i2]
-                cat_stars.add_column(gaia_stars["id"][i1],
+                cat_stars = cat_stars[i1]
+                cat_stars.add_column(gaia_stars["id"][i2],
                                      name=self.gaia_reference_info.name + "_id")
 
                 for band in cat_info.bands:
                     # yaml spline fits are per-band, so loop over bands
                     # read in spline
-                    filename = os.path.join(lsst.utils.getPackageDir("the_monster"),
-                                            "colorterms/",
-                                            f"{cat_info.name}_to_DES_band_{band}.yaml")
-
+                    filename = cat_info.colorterm_file(band)
                     colorterm_spline = ColortermSpline.load(filename)
 
                     # apply colorterms to transform to des mag
@@ -130,13 +127,21 @@ class MatchAndTransform:
                     cat_stars.add_column(model_flux_err,
                                          name=f"decam_{band}_from_{cat_info.name}_fluxErr")
 
+                    # Apply selection to ensure that only useful stars have
+                    # transformations.
+                    selected = cat_info.select_stars(cat_stars, band)
+                    cat_stars[f"decam_{band}_from_{cat_info.name}_flux"][~selected] = np.nan
+                    cat_stars[f"decam_{band}_from_{cat_info.name}_fluxErr"][~selected] = np.nan
+
+                # If any stars are nans in all transformed filters, they should
+                # be removed.
+                n_measurements = np.zeros(len(cat_stars))
+                for band in cat_info.bands:
+                    n_measurements[np.isfinite(cat_stars[f"decam_{band}_from_{cat_info.name}_flux"])] += 1
+                cat_stars = cat_stars[n_measurements > 0]
+
                 if self.write_path_inp is None:
-                    write_path = cat_info.path + '_transformed/'
-                    # The PS1 refcat is coming from the Rubin shared repos, so
-                    # the output can't be in that same place. Explicitly set
-                    # the output path if transforming PS1.
-                    if cat_info.name == 'PS1':
-                        write_path = '/sdf/data/rubin/shared/the_monster/sharded_refcats/ps1_transformed'
+                    write_path = cat_info.write_path
                 else:
                     write_path = self.write_path_inp
 

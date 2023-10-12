@@ -3,11 +3,12 @@ import numpy as np
 import scipy.optimize
 from astropy import units
 import yaml
+import warnings
 
 import lsst.afw.math
 
 
-__all__ = ["ColortermSplineFitter", "ColortermSpline"]
+__all__ = ["ColortermSplineFitter", "MagSplineFitter", "ColortermSpline"]
 
 
 class ColortermSplineFitter:
@@ -74,13 +75,13 @@ class ColortermSplineFitter:
 
         Parameters
         ----------
-        pars : `np.ndarray`
-            Parameters of the polynomial + flux_offset.
+        pars : `np.ndarray` (M,)
+            Parameters of the spline + flux_offset.
         flux_source : `np.ndarray` (N,)
-            Source flux value.
+            Source flux values.
         mag_color : `np.ndarray` (N,)
             Magnitude colors of stars.
-        color_nodes : `np.ndarray` (N,)
+        color_nodes : `np.ndarray` (M,)
             Node locations.
 
         Returns
@@ -219,6 +220,126 @@ class ColortermSplineFitter:
         return t
 
 
+class MagSplineFitter:
+    """Fit flux offsets with splines as a function of magnitude using
+    median statistics.
+
+    The terms here can be run as an afterburner to correct source fluxes
+    to look like target fluxes over a wide range of magnitudes.  E.g.,
+    make PS1 (a source catalog) look like XP (the target catalog) up to
+    bright magnitudes.
+
+    Parameters
+    ----------
+    flux_target : `np.ndarray`
+        The flux array from the target catalog.
+    flux_source : `np.ndarray`
+        The flux array from the source catalog. These will be converted
+        to AB magnitudes (assuming nJy input).
+    mag_nodes : `np.ndarray`
+        Nodes to do magnitude offset fit.
+    """
+    def __init__(self, flux_target, flux_source, mag_nodes):
+        self._flux_target = flux_target
+        self._flux_source = flux_source
+        self._mag_nodes = mag_nodes
+
+    def estimate_p0(self):
+        """Estimate the initial fit parameters.
+
+        Returns
+        -------
+        p0 : `np.ndarray`
+            Estimate of initial fit parameters.
+        """
+        npt = len(self._mag_nodes)
+
+        p0 = np.zeros(npt)
+        p0[:] = np.median(self._flux_source/self._flux_target)
+
+        return p0
+
+    @staticmethod
+    def apply_model(pars, flux_source, mag_nodes):
+        """Apply the model and compute values.
+
+        Parameters
+        ----------
+        pars : `np.ndarray` (M,)
+            Parameters of the spline.
+        flux_source : `np.ndarray` (N,)
+            Source flux values.
+        mag_nodes : `np.ndarray` (M,)
+            Node locations.
+
+        Returns
+        -------
+        flux_model : `np.ndarray` (N,)
+            Model flux, after applying flux offsets to flux_source.
+        """
+        spl = lsst.afw.math.makeInterpolate(
+            mag_nodes,
+            pars,
+            lsst.afw.math.stringToInterpStyle("CUBIC_SPLINE"),
+        )
+        mag_source = (flux_source*units.nJy).to_value(units.ABmag)
+
+        flux_model = flux_source * np.array(spl.interpolate(mag_source))
+
+        return flux_model
+
+    def fit(self, p0):
+        """Perform the spline fit.
+
+        Parameters
+        ----------
+        p0 : `np.ndarray`
+            Initial fit parameters.
+
+        Returns
+        -------
+        pars : `np.ndarray`
+            Best-fit parameters.
+        """
+        res = scipy.optimize.minimize(
+            self.compute_cost_spline,
+            p0,
+            method="L-BFGS-B",
+            jac=False,
+            options={
+                "maxfun": 2000,
+                "maxiter": 2000,
+                "maxcor": 20,
+                "eps": 1e-3,
+                "ftol": 1e-15,
+                "gtol": 1e-15,
+            },
+        )
+        pars = res.x
+
+        return pars
+
+    def compute_cost_spline(self, spline_pars):
+        """Compute the median cost function for spline(pars).
+
+        Parameters
+        ----------
+        spline_pars : `np.ndarray`
+            Fit parameters.
+
+        Returns
+        -------
+        t : `float`
+            Median cost.
+        """
+        flux_model = self.apply_model(spline_pars, self._flux_source, self._mag_nodes)
+
+        absdev = np.abs(self._flux_target - flux_model)
+        t = np.sum(absdev.astype(np.float64))
+
+        return t
+
+
 class ColortermSpline:
     """Save, load, and apply spline color terms.
 
@@ -240,6 +361,10 @@ class ColortermSpline:
         Array of spline values.
     flux_offset : `float`, optional
         Flux offset to apply in conversion.
+    mag_nodes : `np.ndarray` (M,), optional
+        Array of magnitude spline nodes for additional fixups.
+    mag_spline_values : `np.ndarray` (M,), optional
+        Array of magnitude spline values.
     """
     def __init__(
             self,
@@ -251,6 +376,9 @@ class ColortermSpline:
             nodes,
             spline_values,
             flux_offset=0.0,
+            mag_nodes=None,
+            mag_spline_values=None,
+
     ):
         self.source_survey = source_survey
         self.target_survey = target_survey
@@ -260,12 +388,23 @@ class ColortermSpline:
         self.nodes = np.array(nodes)
         self.spline_values = np.array(spline_values)
         self.flux_offset = flux_offset
+        self.mag_nodes = mag_nodes
+        self.mag_spline_values = mag_spline_values
 
         self.spline = lsst.afw.math.makeInterpolate(
             self.nodes,
             self.spline_values,
             lsst.afw.math.stringToInterpStyle("CUBIC_SPLINE"),
         )
+
+        if mag_nodes is not None:
+            self.mag_spline = lsst.afw.math.makeInterpolate(
+                self.mag_nodes,
+                self.mag_spline_values,
+                lsst.afw.math.stringToInterpStyle("CUBIC_SPLINE"),
+            )
+        else:
+            self.mag_spline = None
 
     def save(self, yaml_file, overwrite=False):
         """Serialize to a yaml file.
@@ -287,6 +426,10 @@ class ColortermSpline:
             "spline_values": [float(val) for val in self.spline_values],
             "flux_offset": float(self.flux_offset),
         }
+
+        if self.mag_nodes is not None:
+            yaml_dict["mag_nodes"] = [float(val) for val in self.mag_nodes]
+            yaml_dict["mag_spline_values"] = [float(val) for val in self.mag_spline_values]
 
         serialized = yaml.safe_dump(yaml_dict)
 
@@ -310,6 +453,13 @@ class ColortermSpline:
         with open(yaml_file, "rb") as fd:
             data = yaml.safe_load(fd)
 
+        if "mag_nodes" in data:
+            mag_nodes = data["mag_nodes"]
+            mag_spline_values = data["mag_spline_values"]
+        else:
+            mag_nodes = None
+            mag_spline_values = None
+
         return cls(
             data["source_survey"],
             data["target_survey"],
@@ -319,6 +469,8 @@ class ColortermSpline:
             data["nodes"],
             data["spline_values"],
             flux_offset=data["flux_offset"],
+            mag_nodes=mag_nodes,
+            mag_spline_values=mag_spline_values,
         )
 
     def apply(self, source_color_flux_1, source_color_flux_2, source_flux):
@@ -338,16 +490,33 @@ class ColortermSpline:
         model_flux : `np.ndarray` (N,)
             Array of fluxes converted to target.
         """
-        mag_1 = (np.array(source_color_flux_1)*units.nJy).to_value(units.ABmag)
-        mag_2 = (np.array(source_color_flux_2)*units.nJy).to_value(units.ABmag)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            mag_1 = (np.array(source_color_flux_1)*units.nJy).to_value(units.ABmag)
+            mag_2 = (np.array(source_color_flux_2)*units.nJy).to_value(units.ABmag)
 
         mag_color = mag_1 - mag_2
 
-        model_flux = source_flux * np.array(self.spline.interpolate(mag_color))
+        model_flux = np.array(source_flux) * np.array(self.spline.interpolate(mag_color))
         model_flux -= self.flux_offset
 
-        # Check that things are in range.
-        bad = ((mag_color < self.nodes[0]) | (mag_color > self.nodes[-1]))
+        # Check that things are in range: colors out of range simply should
+        # not be corrected.
+        bad = ((mag_color < self.nodes[0]) | (mag_color > self.nodes[-1]) | (~np.isfinite(mag_color)))
         model_flux[bad] = np.nan
+
+        # Apply magnitude offsets if necessary.
+        if self.mag_spline is not None:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", RuntimeWarning)
+                mag = np.nan_to_num((model_flux*units.nJy).to_value(units.ABmag))
+
+            flux_offset = np.array(self.mag_spline.interpolate(mag))
+
+            # Set the offsets for those out of range to the last node value.
+            flux_offset[mag < self.mag_nodes[0]] = self.mag_spline_values[0]
+            flux_offset[mag > self.mag_nodes[-1]] = self.mag_spline_values[-1]
+
+            model_flux *= flux_offset
 
         return model_flux
