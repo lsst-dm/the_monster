@@ -32,7 +32,7 @@ def read_stars(path, indices, allow_missing=False):
             if allow_missing:
                 continue
         try:
-            temp = SimpleCatalog.readFits(os.path.join(path, str(index) + ".fits"))
+            temp = SimpleCatalog.readFits(fname)
         except RuntimeError as e:
             if allow_missing:
                 continue
