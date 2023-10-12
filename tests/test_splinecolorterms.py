@@ -327,7 +327,7 @@ class MonsterColortermSplineTest(lsst.utils.tests.TestCase):
             spline.save(filename, overwrite=True)
 
 
-class MonsterMagSpineFitterTest(lsst.utils.tests.TestCase):
+class MonsterMagSplineFitterTest(lsst.utils.tests.TestCase):
     def test_magsplinefitter(self):
         n_star = 20_0000
         n_nodes = 10
