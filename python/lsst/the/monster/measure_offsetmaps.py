@@ -79,7 +79,7 @@ class OffsetMapMaker:
             if overwrite:
                 print(f"Found existing {fname}; will overwrite.")
             else:
-                print(f"Found existing {fname}; overwrite=False so nothing to do.")
+                print(f"Found existing {fname}; overwrite=False so no need to remake map.")
                 return fname
 
         print(f"Computing offset maps for {minuend_info.name} - {subtrahend_info.name}")
@@ -200,6 +200,8 @@ class OffsetMapMaker:
         """
         minuend_info = self.MinuendInfoClass()
         subtrahend_info = self.SubtrahendInfoClass()
+
+        print(f"Plotting offset maps for {minuend_info.name} - {subtrahend_info.name}")
 
         offset_map_in = hsp.HealSparseMap.read(hsp_file)
 
