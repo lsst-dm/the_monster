@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from astropy import units
 import esutil
@@ -36,6 +37,11 @@ class OffsetMapMaker:
     # Name of ID to use for matching.
     match_id_name = "GaiaDR3_id"
 
+    # When plotting, limit to pixels within this box.
+    # (The ra range can wrap around 0.0)
+    plot_ra_range = [0.0, 360.0]
+    plot_dec_range = [-90.0, 90.0]
+
     @property
     def nside(self):
         return 128
@@ -66,6 +72,15 @@ class OffsetMapMaker:
         """
         minuend_info = self.MinuendInfoClass()
         subtrahend_info = self.SubtrahendInfoClass()
+
+        fname = f"offset_map_{minuend_info.name}-{subtrahend_info.name}.hsp"
+
+        if os.path.isfile(fname):
+            if overwrite:
+                print(f"Found existing {fname}; will overwrite.")
+            else:
+                print(f"Found existing {fname}; overwrite=False so nothing to do.")
+                return fname
 
         print(f"Computing offset maps for {minuend_info.name} - {subtrahend_info.name}")
 
@@ -171,8 +186,7 @@ class OffsetMapMaker:
 
                 offset_map[ipnest[i1a[0]]] = element
 
-        fname = f"offset_map_{minuend_info.name}-{subtrahend_info.name}.hsp"
-        offset_map.write(fname)
+        offset_map.write(fname, clobber=overwrite)
 
         return fname
 
@@ -187,10 +201,10 @@ class OffsetMapMaker:
         minuend_info = self.MinuendInfoClass()
         subtrahend_info = self.SubtrahendInfoClass()
 
-        offset_map = hsp.HealSparseMap.read(hsp_file)
+        offset_map_in = hsp.HealSparseMap.read(hsp_file)
 
         bands = []
-        for name in offset_map.dtype.names:
+        for name in offset_map_in.dtype.names:
             if name.startswith("ngood"):
                 parts = name.split("_")
                 bands.append(parts[1])
@@ -198,6 +212,18 @@ class OffsetMapMaker:
         def gauss(x, *p):
             A, mu, sigma = p
             return A*np.exp(-(x-mu)**2./(2.*sigma**2.))
+
+        # Exclude pixels that are outside of the plotting range.
+        good_pixels = hpg.query_box(
+            offset_map_in.nside_sparse,
+            self.plot_ra_range[0],
+            self.plot_ra_range[1],
+            self.plot_dec_range[0],
+            self.plot_dec_range[1],
+        )
+
+        offset_map = hsp.HealSparseMap.make_empty_like(offset_map_in)
+        offset_map[good_pixels] = offset_map_in[good_pixels]
 
         for band in bands:
             ngood_band = offset_map[f"ngood_{band}"].copy()
@@ -281,20 +307,37 @@ class GaiaXPMinusDESOffsetMapMaker(OffsetMapMaker):
     MinuendInfoClass = GaiaXPInfo
     SubtrahendInfoClass = DESInfo
 
+    # Make sure we exclude the DES outrigger fields.
+    plot_ra_range = [270.0, 120.0]
+    plot_dec_range = [-80.0, 10.0]
+
 
 class PS1MinusDESOffsetMapMaker(OffsetMapMaker):
     MinuendInfoClass = PS1Info
     SubtrahendInfoClass = DESInfo
+
+    # Make sure we exclude the DES outrigger fields
+    # and anything below dec < -30.0 for PS1.
+    plot_ra_range = [270.0, 120.0]
+    plot_dec_range = [-30.0, 10.0]
 
 
 class SkyMapperMinusDESOffsetMapMaker(OffsetMapMaker):
     MinuendInfoClass = SkyMapperInfo
     SubtrahendInfoClass = DESInfo
 
+    # Make sure we exclude the DES outrigger fields.
+    plot_ra_range = [270.0, 120.0]
+    plot_dec_range = [-80.0, 10.0]
+
 
 class VSTMinusDESOffsetMapMaker(OffsetMapMaker):
     MinuendInfoClass = VSTInfo
     SubtrahendInfoClass = DESInfo
+
+    # Make sure we exclude the DES outrigger fields.
+    plot_ra_range = [270.0, 120.0]
+    plot_dec_range = [-80.0, 10.0]
 
 
 class PS1MinusGaiaXPOffsetMapMaker(OffsetMapMaker):
@@ -302,6 +345,10 @@ class PS1MinusGaiaXPOffsetMapMaker(OffsetMapMaker):
     SubtrahendInfoClass = GaiaXPInfo
 
     has_low_glat = True
+
+    # Make sure we exclude
+    # anything below dec < -30.0 for PS1.
+    plot_dec_range = [-30.0, 90.0]
 
 
 class SkyMapperMinusGaiaXPOffsetMapMaker(OffsetMapMaker):
