@@ -41,6 +41,7 @@ class OffsetMapMaker:
     # (The ra range can wrap around 0.0)
     plot_ra_range = [0.0, 360.0]
     plot_dec_range = [-90.0, 90.0]
+    plot_figsize = (16, 6)
 
     @property
     def nside(self):
@@ -241,7 +242,7 @@ class OffsetMapMaker:
                 # Make a full sky map
 
                 plt.clf()
-                fig = plt.figure(figsize=(18, 6))
+                fig = plt.figure(figsize=self.plot_figsize)
                 ax = fig.add_subplot(111)
 
                 sp = skyproj.McBrydeSkyproj(ax=ax)
@@ -257,7 +258,7 @@ class OffsetMapMaker:
                 offset_band[valid_pixels[low]] = None
 
             plt.clf()
-            fig = plt.figure(figsize=(18, 6))
+            fig = plt.figure(figsize=self.plot_figsize)
             ax = fig.add_subplot(111)
 
             sp = skyproj.McBrydeSkyproj(ax=ax)
@@ -312,6 +313,7 @@ class GaiaXPMinusDESOffsetMapMaker(OffsetMapMaker):
     # Make sure we exclude the DES outrigger fields.
     plot_ra_range = [270.0, 120.0]
     plot_dec_range = [-80.0, 10.0]
+    plot_figsize = (10, 6)
 
 
 class PS1MinusDESOffsetMapMaker(OffsetMapMaker):
@@ -322,6 +324,7 @@ class PS1MinusDESOffsetMapMaker(OffsetMapMaker):
     # and anything below dec < -30.0 for PS1.
     plot_ra_range = [270.0, 120.0]
     plot_dec_range = [-30.0, 10.0]
+    plot_figsize = (12, 6)
 
 
 class SkyMapperMinusDESOffsetMapMaker(OffsetMapMaker):
@@ -331,6 +334,7 @@ class SkyMapperMinusDESOffsetMapMaker(OffsetMapMaker):
     # Make sure we exclude the DES outrigger fields.
     plot_ra_range = [270.0, 120.0]
     plot_dec_range = [-80.0, 10.0]
+    plot_figsize = (10, 6)
 
 
 class VSTMinusDESOffsetMapMaker(OffsetMapMaker):
@@ -340,6 +344,7 @@ class VSTMinusDESOffsetMapMaker(OffsetMapMaker):
     # Make sure we exclude the DES outrigger fields.
     plot_ra_range = [270.0, 120.0]
     plot_dec_range = [-80.0, 10.0]
+    plot_figsize = (12, 6)
 
 
 class PS1MinusGaiaXPOffsetMapMaker(OffsetMapMaker):
@@ -365,6 +370,10 @@ class SkyMapperMinusPS1OffsetMapMaker(OffsetMapMaker):
     SubtrahendInfoClass = PS1Info
 
     has_low_glat = True
+
+    # Make sure we exclude
+    # anything below dec < -30.0 for PS1.
+    plot_dec_range = [-30.0, 90.0]
 
 
 class VSTMinusGaiaXPOffsetMapMaker(OffsetMapMaker):
