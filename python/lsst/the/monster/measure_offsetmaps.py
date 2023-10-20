@@ -67,6 +67,8 @@ class OffsetMapMaker:
         minuend_info = self.MinuendInfoClass()
         subtrahend_info = self.SubtrahendInfoClass()
 
+        print(f"Computing offset maps for {minuend_info.name} - {subtrahend_info.name}")
+
         minuend_path = minuend_info.write_path
         subtrahend_path = subtrahend_info.write_path
 
