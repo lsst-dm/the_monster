@@ -296,13 +296,22 @@ class OffsetMapMaker:
             plt.xlabel(f"{minuend_info.name} - {subtrahend_info.name} {band} (mmag)")
             plt.ylabel(f"Number of nside={offset_band.nside_sparse} pixels")
             plt.annotate(
-                r"$\sigma = %.1f\,\mathrm{mmag}$" % (coeff[2]),
+                r"$\mu = %.1f\,\mathrm{mmag}$" % (coeff[1]),
                 (0.99, 0.99),
                 fontsize=14,
                 xycoords="axes fraction",
                 ha="right",
                 va="top",
             )
+            plt.annotate(
+                r"$\sigma = %.1f\,\mathrm{mmag}$" % (coeff[2]),
+                (0.99, 0.92),
+                fontsize=14,
+                xycoords="axes fraction",
+                ha="right",
+                va="top",
+            )
+
             plt.savefig(f"{minuend_info.name}-{subtrahend_info.name}_highglat_hist_{band}.png")
 
 
