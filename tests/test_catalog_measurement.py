@@ -34,6 +34,7 @@ class DESInfoTester(DESInfo):
 class PS1InfoTester(PS1Info):
     PATH = os.path.join(ROOT, "data", "ps1")
     NAME = "TestPS1"
+    COLORTERM_PATH = os.path.join(ROOT, "data", "colorterms")
 
 
 class GaiaXPSplineMeasurerTester(GaiaXPSplineMeasurer):

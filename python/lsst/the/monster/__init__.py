@@ -25,4 +25,5 @@ from .isolate_and_transform import *
 from .splinecolorterms import *
 from .refcats import *
 from .measure_colorterms import *
+from .measure_offsetmaps import *
 from .utils import *

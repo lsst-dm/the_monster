@@ -4,7 +4,7 @@ import numpy as np
 
 from lsst.pipe.tasks.isolatedStarAssociation import IsolatedStarAssociationTask
 from .splinecolorterms import ColortermSpline
-from .refcats import GaiaXPInfo, GaiaDR3Info, SkyMapperInfo, PS1Info, VSTInfo
+from .refcats import GaiaXPInfo, GaiaDR3Info, SkyMapperInfo, PS1Info, VSTInfo, DESInfo
 from .utils import read_stars, makeRefSchema, makeRefCat
 
 __all__ = ["MatchAndTransform"]
@@ -42,7 +42,7 @@ class MatchAndTransform:
     def __init__(self,
                  gaia_reference_class=GaiaDR3Info,
                  catalog_info_class_list=[GaiaXPInfo, SkyMapperInfo,
-                                          PS1Info, VSTInfo],
+                                          PS1Info, VSTInfo, DESInfo],
                  write_path_inp=None,
                  testing_mode=False,
                  ):

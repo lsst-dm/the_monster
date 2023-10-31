@@ -43,6 +43,9 @@ def read_stars(path, indices, allow_missing=False):
         else:
             stars.extend(temp)
 
+    if stars is None:
+        return []
+
     stars = stars.copy(deep=True).asAstropy()
 
     stars["coord_ra"].convert_unit_to(units.degree)

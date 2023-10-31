@@ -304,6 +304,7 @@ class GaiaXPInfo(RefcatInfo):
 class DESInfo(RefcatInfo):
     PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/des_y6_calibration_stars_20230511"
     NAME = "DES"
+    bands = ["g", "r", "i", "z", "y"]
 
     def get_flux_field(self, band):
         return f"MAG_STD_{band.upper()}_flux"
