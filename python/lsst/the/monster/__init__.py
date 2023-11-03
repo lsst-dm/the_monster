@@ -26,4 +26,5 @@ from .splinecolorterms import *
 from .refcats import *
 from .measure_colorterms import *
 from .measure_offsetmaps import *
+from .measure_synth_colorterms import *
 from .utils import *
