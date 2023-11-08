@@ -2,9 +2,13 @@ import os
 import unittest
 import tempfile
 
-import lsst.utils
+# Ensure that matplotlib doesn't try to open a display during testing.
+import matplotlib
+matplotlib.use("Agg")
 
-from lsst.the.monster import SynthLSSTSplineMeasurer, SynthLSSTInfo
+import lsst.utils  # noqa: E402
+
+from lsst.the.monster import SynthLSSTSplineMeasurer, SynthLSSTInfo  # noqa: E402
 
 ROOT = os.path.abspath(os.path.dirname(__file__))
 
