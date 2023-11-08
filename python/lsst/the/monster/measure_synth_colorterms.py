@@ -264,3 +264,5 @@ class SynthLSSTSplineMeasurer:
                     warnings.simplefilter("ignore", UserWarning)
                     plt.tight_layout()
                 plt.savefig(f"{des_info.name}_to_{lsst_info.name}_band_{band}_color_term.png")
+
+        return yaml_files
