@@ -89,11 +89,10 @@ class SynthLSSTSplineMeasurer:
         des_info = self.DESInfoClass()
         lsst_info = self.SynthLSSTInfoClass()
 
-        # Read the templates
-        template_file = importlib.resources.files("fgcm.data.templates").joinpath(
-            "stellar_templates_master.fits"
-        )
-
+        # Read the templates.
+        # These are the FGCM ingestion of the SDSS + Kurusz templates
+        # assembled by Pat Kelly in
+        # https://ui.adsabs.harvard.edu/abs/2014MNRAS.439...28K/abstract
         template_file = importlib.resources.files("fgcm.data.templates").joinpath(
             "stellar_templates_master.fits"
         )
@@ -135,17 +134,15 @@ class SynthLSSTSplineMeasurer:
                 template_f_lambda = templates[i]['flux']
                 template_f_nu = template_f_lambda * template_lambda * template_lambda
 
-                int_func = interpolate.interp1d(template_lambda, template_f_nu)
+                int_func = interpolate.interp1d(
+                    template_lambda,
+                    template_f_nu,
+                    bounds_error=False,
+                    fill_value=(template_f_nu[0], template_f_nu[-1]),
+                )
+                # The throughputs are defined in nm, convert to Angstrom.
                 tput_lambda = throughputs[band]["wavelength"]*10.
-                f_nu = np.zeros(tput_lambda.size)
-                # Make sure we interpolate in range
-                good, = np.where((tput_lambda >= template_lambda[0]) & (tput_lambda <= template_lambda[-1]))
-                f_nu[good] = int_func(tput_lambda[good])
-                # out of range, let it hit the limit
-                lo, = np.where(tput_lambda < template_lambda[0])
-                f_nu[lo] = int_func(tput_lambda[good[0]])
-                hi, = np.where(tput_lambda > template_lambda[-1])
-                f_nu[hi] = int_func(tput_lambda[good[-1]])
+                f_nu = int_func(tput_lambda)
 
                 num = integrate.simpson(f_nu*throughputs[band]["throughput"]/tput_lambda, tput_lambda)
                 denom = integrate.simpson(throughputs[band]["throughput"]/tput_lambda, tput_lambda)
@@ -173,17 +170,14 @@ class SynthLSSTSplineMeasurer:
                 template_f_lambda = templates[i]['flux']
                 template_f_nu = template_f_lambda * template_lambda * template_lambda
 
-                int_func = interpolate.interp1d(template_lambda, template_f_nu)
+                int_func = interpolate.interp1d(
+                    template_lambda,
+                    template_f_nu,
+                    bounds_error=False,
+                    fill_value=(template_f_nu[0], template_f_nu[-1]),
+                )
                 tput_lambda = des_passbands["LAMBDA"]
-                f_nu = np.zeros(tput_lambda.size)
-                # Make sure we interpolate in range
-                good, = np.where((tput_lambda >= template_lambda[0]) & (tput_lambda <= template_lambda[-1]))
-                f_nu[good] = int_func(tput_lambda[good])
-                # out of range, let it hit the limit
-                lo, = np.where(tput_lambda < template_lambda[0])
-                f_nu[lo] = int_func(tput_lambda[good[0]])
-                hi, = np.where(tput_lambda > template_lambda[-1])
-                f_nu[hi] = int_func(tput_lambda[good[-1]])
+                f_nu = int_func(tput_lambda)
 
                 num = integrate.simpson(f_nu*des_passbands[band]/tput_lambda, tput_lambda)
                 denom = integrate.simpson(des_passbands[band], tput_lambda)
@@ -204,7 +198,6 @@ class SynthLSSTSplineMeasurer:
             ratio = np.median(flux_lsst[selected]/flux_des[selected])
             flux_lsst /= ratio
 
-            # Only do 5 nodes
             nodes = np.linspace(color_range[0], color_range[1], self.n_nodes)
 
             fitter = ColortermSplineFitter(
