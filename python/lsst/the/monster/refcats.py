@@ -7,7 +7,7 @@ import lsst.utils
 from abc import ABC, abstractmethod
 
 
-__all__ = ["GaiaDR3Info", "GaiaXPInfo", "DESInfo", "SkyMapperInfo", "PS1Info", "VSTInfo"]
+__all__ = ["GaiaDR3Info", "GaiaXPInfo", "DESInfo", "SkyMapperInfo", "PS1Info", "VSTInfo", "SynthLSSTInfo"]
 
 
 class RefcatInfo(ABC):
@@ -479,3 +479,18 @@ class VSTInfo(RefcatInfo):
             return (20.0, np.inf)
         else:
             return (0.0, np.inf)
+
+
+class SynthLSSTInfo(RefcatInfo):
+    NAME = "SynthLSST"
+    bands = ["u", "g", "r", "i", "z", "y"]
+
+    def get_flux_field(self, band):
+        return f"{band}_flux"
+
+    # These color ranges are determined by the template stars.
+    def get_gmi_color_range(self):
+        return (0.5, 3.0)
+
+    def get_imz_color_range(self):
+        return (0.0, 0.6)
