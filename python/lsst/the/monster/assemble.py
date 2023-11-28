@@ -2,6 +2,7 @@ import esutil
 import os
 from smatch import Matcher
 import numpy as np
+import lsst.utils
 
 from lsst.pipe.tasks.isolatedStarAssociation import IsolatedStarAssociationTask
 from .splinecolorterms import ColortermSpline
@@ -94,15 +95,20 @@ class AssembleMonsterRefcat:
                                            allow_missing=self.testing_mode)
                     
                     # Transform from the DES to the synthetic LSST system:
-                    # I need to figure out how to get the synthetic colorterm files
-                    # and apply them. 
-
-                    """
+                    colorterm_path = os.path.join(
+                        lsst.utils.getPackageDir("the_monster"),
+                        "colorterms",
+                        )
+                    colorterm_file_string = 'DES_to_SynthLSST_band'
+                    colorterm_filename = os.path.join(
+                        colorterm_path,
+                        colorterm_file_string+f'_{band}.yaml',
+                        )
+                    
                     # read in spline
-                    filename = cat_info.colorterm_file(band)
-                    colorterm_spline = ColortermSpline.load(filename)
+                    colorterm_spline = ColortermSpline.load(colorterm_filename)
 
-                    # apply colorterms to transform to des mag
+                    # apply colorterms to transform to SynthLSST mag
                     band_1, band_2 = cat_info.get_color_bands(band)
                     orig_flux = cat_stars[cat_info.get_flux_field(band)]
                     orig_flux_err = cat_stars[cat_info.get_flux_field(band)+'Err']
@@ -115,13 +121,25 @@ class AssembleMonsterRefcat:
                     # Rescale flux error to keep S/N constant
                     model_flux_err = model_flux * (orig_flux_err/orig_flux)
 
-                    # Append the modeled flux columns to cat_stars
-                    cat_stars.add_column(model_flux,
-                                         name=f"decam_{band}_from_{cat_info.name}_flux")
-                    cat_stars.add_column(model_flux_err,
-                                         name=f"decam_{band}_from_{cat_info.name}_fluxErr")
-                    """
+                    # Apply selection to ensure that only useful stars have
+                    # transformations.
+                    selected = cat_info.select_stars(cat_stars, band)
+                    # cat_stars[f"monster_lsst_{band}_flux"][~selected] = np.nan
+                    # cat_stars[f"monster_lsst_{band}_fluxErr"][~selected] = np.nan
+                    flux_not_nan = np.isfinite(cat_stars[f"monster_lsst_{band}_flux"])
+                    flag = selected & flux_not_nan
+                    cat_stars_selected = cat_stars[flag]
 
-                    # Match the output catalog to Gaia.
-                    a, b = esutil.numpy_util.match(gaia_stars_all['id'], output['id'])
+                    # Match the transformed catalog to Gaia.
+                    a, b = esutil.numpy_util.match(gaia_stars_all['id'],
+                                                   cat_stars_selected['id'])
 
+                    # If the flux measurement is OK, write it to the overall Gaia catalog:
+                    gaia_stars_all[a][f"monster_lsst_{band}_flux"] = model_flux[flag[b]]
+                    gaia_stars_all[a][f"monster_lsst_{band}_fluxErr"] = model_flux_err[flag[b]]
+
+                    # cat_stars[f"monster_lsst_{band}_flux"] = model_flux
+                    # cat_stars[f"monster_lsst_{band}_fluxErr"] = model_flux_err
+
+                    # Update the flags to denote which survey the flux came from:
+                    
