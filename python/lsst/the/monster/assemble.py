@@ -51,8 +51,7 @@ class AssembleMonsterRefcat:
         self.synth_lsst_info = SynthLSSTInfo()
         self.testing_mode = testing_mode
         self.write_path_inp = write_path_inp
-        # Not including u-band for now.
-        self.all_bands = ['g', 'r', 'i', 'z', 'y']
+        self.all_bands = ['u', 'g', 'r', 'i', 'z', 'y']
 
     def run(self,
             *,
