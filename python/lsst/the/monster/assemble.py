@@ -5,9 +5,9 @@ import numpy as np
 import lsst.utils
 
 from lsst.pipe.tasks.isolatedStarAssociation import IsolatedStarAssociationTask
-from .splinecolorterms import ColortermSpline
-from .refcats import GaiaXPInfo, GaiaDR3Info, SkyMapperInfo, PS1Info, VSTInfo, DESInfo
-from .utils import read_stars, makeRefSchema, makeRefCat
+from splinecolorterms import ColortermSpline
+from refcats import GaiaXPInfo, GaiaDR3Info, SkyMapperInfo, PS1Info, VSTInfo, DESInfo, SynthLSSTInfo
+from utils import read_stars, makeRefSchema, makeRefCat
 
 __all__ = ["AssembleMonsterRefcat"]
 
@@ -48,9 +48,11 @@ class AssembleMonsterRefcat:
         self.gaia_reference_info = gaia_reference_class()
         self.catalog_info_class_list = [cat_info() for cat_info
                                         in catalog_info_class_list]
+        self.synth_lsst_info = SynthLSSTInfo()
         self.testing_mode = testing_mode
         self.write_path_inp = write_path_inp
-        self.all_bands = ['u', 'g', 'r', 'i', 'z', 'y']
+        # Not including u-band for now.
+        self.all_bands = ['g', 'r', 'i', 'z', 'y']
 
     def run(self,
             *,
@@ -73,13 +75,14 @@ class AssembleMonsterRefcat:
         # Initialize output columns for the fluxes, flux errors, and flags,
         # with all of them set to NaN by default:
         nan_column = np.full(len(gaia_stars_all["id"]), np.nan)
+        empty_column = np.full(len(gaia_stars_all["id"]), "")
 
         for band in self.all_bands:
             gaia_stars_all.add_column(nan_column,
                                       name=f"monster_lsst_{band}_flux")
             gaia_stars_all.add_column(nan_column,
                                       name=f"monster_lsst_{band}_fluxErr")
-            gaia_stars_all.add_column(nan_column,
+            gaia_stars_all.add_column(empty_column,
                                       name=f"monster_lsst_{band}_source_flag")
         
             # Loop over the refcats
@@ -90,7 +93,9 @@ class AssembleMonsterRefcat:
                 # Read in star cat that has already been transformed to the DES
                 # system (if it exists). Note the use of "write_path" instead
                 # of "path" here, so that it gets the transformed catalog.
-                if os.path.isfile(cat_info.write_path+'/'+str(htmid)+'.fits'):
+                if os.path.isfile(cat_info.write_path+'/'+str(htmid)+'.fits') and\
+                    band in cat_info.bands:
+
                     cat_stars = read_stars(cat_info.write_path, [htmid],
                                            allow_missing=self.testing_mode)
                     
@@ -110,36 +115,61 @@ class AssembleMonsterRefcat:
 
                     # apply colorterms to transform to SynthLSST mag
                     band_1, band_2 = cat_info.get_color_bands(band)
-                    orig_flux = cat_stars[cat_info.get_flux_field(band)]
-                    orig_flux_err = cat_stars[cat_info.get_flux_field(band)+'Err']
+                    orig_flux = cat_stars[f"decam_{band}_from_{cat_info.name}_flux"]
+                    orig_flux_err = cat_stars[f"decam_{band}_from_{cat_info.name}_fluxErr"]
                     model_flux = colorterm_spline.apply(
-                        cat_stars[cat_info.get_flux_field(band_1)],
-                        cat_stars[cat_info.get_flux_field(band_2)],
+                        cat_stars[f"decam_{band_1}_from_{cat_info.name}_flux"],
+                        cat_stars[f"decam_{band_2}_from_{cat_info.name}_flux"],
                         orig_flux,
                     )
 
                     # Rescale flux error to keep S/N constant
                     model_flux_err = model_flux * (orig_flux_err/orig_flux)
 
-                    # Apply selection to ensure that only useful stars have
-                    # transformations.
-                    selected = cat_info.select_stars(cat_stars, band)
-                    # cat_stars[f"monster_lsst_{band}_flux"][~selected] = np.nan
-                    # cat_stars[f"monster_lsst_{band}_fluxErr"][~selected] = np.nan
+                    # Add the fluxes and their errors to the catalog:
+                    cat_stars[f"monster_lsst_{band}_flux"] = model_flux
+                    cat_stars[f"monster_lsst_{band}_fluxErr"] = model_flux_err
+
+                    # Apply selection to only apply transformations within the
+                    # useful color range. (Note that the input DES-system catalogs
+                    # already had their survey-specific cuts applied, so these
+                    # cuts should be for the SynthLSST transformations.)
+                    color_range = self.synth_lsst_info.get_color_range(band)
+                    colors = cat_info.get_transformed_mag_colors(cat_stars, band)
+                    selected = (colors >= color_range[0]) & (colors <= color_range[1])
+
+                    # selected = cat_info.select_stars(cat_stars, band)
                     flux_not_nan = np.isfinite(cat_stars[f"monster_lsst_{band}_flux"])
                     flag = selected & flux_not_nan
                     cat_stars_selected = cat_stars[flag]
 
                     # Match the transformed catalog to Gaia.
                     a, b = esutil.numpy_util.match(gaia_stars_all['id'],
-                                                   cat_stars_selected['id'])
+                                                   cat_stars_selected['GaiaDR3_id'])
 
                     # If the flux measurement is OK, write it to the overall Gaia catalog:
-                    gaia_stars_all[a][f"monster_lsst_{band}_flux"] = model_flux[flag[b]]
-                    gaia_stars_all[a][f"monster_lsst_{band}_fluxErr"] = model_flux_err[flag[b]]
-
-                    # cat_stars[f"monster_lsst_{band}_flux"] = model_flux
-                    # cat_stars[f"monster_lsst_{band}_fluxErr"] = model_flux_err
+                    gaia_stars_all[f"monster_lsst_{band}_flux"][a] = cat_stars_selected[f"monster_lsst_{band}_flux"][b]
+                    gaia_stars_all[f"monster_lsst_{band}_fluxErr"][a] = cat_stars_selected[f"monster_lsst_{band}_fluxErr"][b]
 
                     # Update the flags to denote which survey the flux came from:
-                    
+                    gaia_stars_all[f"monster_lsst_{band}_source_flag"][a] = cat_info.flag
+
+        import pdb; pdb.set_trace()
+
+        # Output the finished catalog for the shard:
+        if os.path.exists(write_path) is False:
+            os.makedirs(write_path)
+        write_path += f"/{htmid}.fits"
+
+        # Convert the refcat to a SimpleCatalog
+        refSchema = makeRefSchema(cat_info.name, cat_info.bands,
+                                  self.gaia_reference_info.name)
+        refCat = makeRefCat(refSchema, cat_stars[outcols],
+                            cat_info.name, cat_info.bands,
+                            self.gaia_reference_info.name)
+
+        # Save the shard to FITS.
+        refCat.writeFits(write_path)
+
+        if verbose:
+            print('Transformed '+cat_info.path+'/'+str(htmid)+'.fits')
