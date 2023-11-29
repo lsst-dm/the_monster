@@ -5,7 +5,8 @@ import numpy as np
 from lsst.afw.table import SimpleCatalog
 import lsst.afw.table as afwTable
 
-__all__ = ["read_stars", "makeRefSchema", "makeRefCat"]
+__all__ = ["read_stars", "makeRefSchema", "makeRefCat",
+           "makeMonsterSchema", "makeMonsterCat"]
 
 
 def read_stars(path, indices, allow_missing=False):
@@ -126,3 +127,94 @@ def makeRefCat(refSchema, refTable, survey, bands, reference_name):
         refCat[colname_err][:] = refTable[colname_err]
 
     return refCat
+
+def makeMonsterSchema(gaia_catalog_columns, bands):
+    """
+    Make the monster refcat schema. Include all columns from Gaia, as well
+    as transformed fluxes, flux errors, and flags identifying the source
+    of each flux entry.
+
+    Parameters
+    ----------
+    gaia_catalog_columns : `List` of `TableColumns`
+        Gaia catalog columns (e.g., from "gaia_stars_all.itercols()")
+    bands : `List` of `str`
+        Names of the bands to include in the monster refcat
+
+    Returns
+    -------
+    monsterSchema: `lsst.afw.table.Schema`
+    """
+
+    monsterSchema = afwTable.SimpleTable.makeMinimalSchema()
+
+    exclude_columns = ["id", "coord_ra", "coord_dec", "monster_lsst_u_flux",
+                       "monster_lsst_u_fluxErr", "monster_lsst_u_source_flag",
+                       "monster_lsst_g_flux", "monster_lsst_g_fluxErr",
+                       "monster_lsst_g_source_flag", "monster_lsst_r_flux",
+                       "monster_lsst_r_fluxErr", "monster_lsst_r_source_flag",
+                       "monster_lsst_i_flux", "monster_lsst_i_fluxErr",
+                       "monster_lsst_i_source_flag", "monster_lsst_z_flux",
+                       "monster_lsst_z_fluxErr", "monster_lsst_z_source_flag",
+                       "monster_lsst_y_flux", "monster_lsst_y_fluxErr",
+                       "monster_lsst_y_source_flag"]
+
+    fieldtype_dict = {'float32':'F', 'float64':'D',
+                      'int64':'L', 'bool':'B'}
+
+    for col in gaia_catalog_columns:
+        if col.name not in exclude_columns:
+            if col.unit is not None:
+                monsterSchema.addField(col.name,
+                                       type=fieldtype_dict[col.dtype.name],
+                                       doc=col.description,
+                                       units=col.unit.to_string()
+                                       )
+            else:
+                monsterSchema.addField(col.name,
+                                       type=fieldtype_dict[col.dtype.name],
+                                       doc=col.description,
+                                       units=''
+                                       )
+
+
+    for band in bands:
+        fluxcolname = f"monster_lsst_{band}_flux"
+        fluxcolname_err = fluxcolname+'Err'
+        flagcolname = f"monster_lsst_{band}_source_flag"
+        monsterSchema.addField(fluxcolname, type='D',
+                               doc='flux transformed to synthetic LSST system',
+                               units='nJy')
+        monsterSchema.addField(fluxcolname_err, type='D',
+                               doc='error on flux transformed to synthetic LSST system',
+                               units='nJy')
+        monsterSchema.addField(flagcolname, type='I',
+                               doc='source of flux (0:VST, 1:Skymapper, 2:PS1, 3:GaiaXP, 4:DES)',
+                               units='')
+
+    return monsterSchema
+
+def makeMonsterCat(monsterSchema, monsterTable):
+    """
+    Make the Gaia catalog with transformed and rank-ordered reference fluxes
+    to persist.
+
+    Parameters
+    ----------
+    monsterSchema: `lsst.afw.table.Schema`
+       Monster reference catalog schema
+    monsterTable: `Astropy Table`
+       Monster reference catalog to convert
+
+    Returns
+    -------
+    monsterCat: `lsst.afw.table.BaseCatalog`
+       Monster reference catalog for persistence
+    """
+
+    monsterCat = afwTable.SimpleCatalog(monsterSchema)
+    monsterCat.resize(np.size(monsterTable))
+    for col in monsterTable.itercols():
+        monsterCat[col.name] = monsterTable[col.name]
+
+    return monsterCat

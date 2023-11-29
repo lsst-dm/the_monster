@@ -326,7 +326,7 @@ class GaiaDR3Info(RefcatInfo):
 class GaiaXPInfo(RefcatInfo):
     PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/gaia_xp_ps_des_sdss_sm_20221216"
     NAME = "GaiaXP"
-    FLAG = "G"
+    FLAG = 3
     bands = ["g", "r", "i", "z", "y"]
 
     def get_flux_field(self, band):
@@ -359,7 +359,7 @@ class GaiaXPInfo(RefcatInfo):
 class DESInfo(RefcatInfo):
     PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/des_y6_calibration_stars_20230511"
     NAME = "DES"
-    FLAG = "D"
+    FLAG = 4
     bands = ["g", "r", "i", "z", "y"]
 
     def get_flux_field(self, band):
@@ -407,7 +407,7 @@ class DESInfo(RefcatInfo):
 class SkyMapperInfo(RefcatInfo):
     PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/sky_mapper_dr2_20221205"
     NAME = "SkyMapper"
-    FLAG = "S"
+    FLAG = 1
     bands = ["g", "r", "i", "z"]
 
     def get_flux_field(self, band):
@@ -448,7 +448,7 @@ class PS1Info(RefcatInfo):
     PATH = "/fs/ddn/sdf/group/rubin/ncsa-datasets/refcats/htm/v1/ps1_pv3_3pi_20170110"
     WRITE_PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/ps1_transformed"
     NAME = "PS1"
-    FLAG = "P"
+    FLAG = 2
     bands = ["g", "r", "i", "z", "y"]
 
     def get_flux_field(self, band):
@@ -503,7 +503,7 @@ class PS1Info(RefcatInfo):
 class VSTInfo(RefcatInfo):
     PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/vst_atlas_20221205"
     NAME = "VST"
-    FLAG = "V"
+    FLAG = 0
     bands = ["g", "r", "i", "z"]
 
     def get_flux_field(self, band):

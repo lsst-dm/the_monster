@@ -7,7 +7,7 @@ import lsst.utils
 from lsst.pipe.tasks.isolatedStarAssociation import IsolatedStarAssociationTask
 from splinecolorterms import ColortermSpline
 from refcats import GaiaXPInfo, GaiaDR3Info, SkyMapperInfo, PS1Info, VSTInfo, DESInfo, SynthLSSTInfo
-from utils import read_stars, makeRefSchema, makeRefCat
+from utils import read_stars, makeMonsterSchema, makeMonsterCat
 
 __all__ = ["AssembleMonsterRefcat"]
 
@@ -71,17 +71,18 @@ class AssembleMonsterRefcat:
         gaia_stars_all = read_stars(self.gaia_reference_info.path, [htmid],
                                     allow_missing=self.testing_mode)
         
-        # Initialize output columns for the fluxes, flux errors, and flags,
-        # with all of them set to NaN by default:
+        # Initialize output columns for the fluxes and flux errors,
+        # with all of them set to NaN by default. Also initialize flag columns
+        # with "-1" values as default.
         nan_column = np.full(len(gaia_stars_all["id"]), np.nan)
-        empty_column = np.full(len(gaia_stars_all["id"]), "")
+        int_column = np.full(len(gaia_stars_all["id"]), -1)
 
         for band in self.all_bands:
             gaia_stars_all.add_column(nan_column,
                                       name=f"monster_lsst_{band}_flux")
             gaia_stars_all.add_column(nan_column,
                                       name=f"monster_lsst_{band}_fluxErr")
-            gaia_stars_all.add_column(empty_column,
+            gaia_stars_all.add_column(int_column,
                                       name=f"monster_lsst_{band}_source_flag")
         
             # Loop over the refcats
@@ -153,22 +154,20 @@ class AssembleMonsterRefcat:
                     # Update the flags to denote which survey the flux came from:
                     gaia_stars_all[f"monster_lsst_{band}_source_flag"][a] = cat_info.flag
 
-        import pdb; pdb.set_trace()
+        # Call this version "monster_v1":
+        write_path_monster = "/sdf/data/rubin/shared/the_monster/sharded_refcats/monster_v1"
 
         # Output the finished catalog for the shard:
-        if os.path.exists(write_path) is False:
-            os.makedirs(write_path)
-        write_path += f"/{htmid}.fits"
+        if os.path.exists(write_path_monster) is False:
+            os.makedirs(write_path_monster)
+        write_path_monster += f"/{htmid}.fits"
 
         # Convert the refcat to a SimpleCatalog
-        refSchema = makeRefSchema(cat_info.name, cat_info.bands,
-                                  self.gaia_reference_info.name)
-        refCat = makeRefCat(refSchema, cat_stars[outcols],
-                            cat_info.name, cat_info.bands,
-                            self.gaia_reference_info.name)
+        monsterSchema = makeMonsterSchema(gaia_stars_all.itercols(), self.all_bands)
+        monsterCat = makeMonsterCat(monsterSchema, gaia_stars_all)
 
         # Save the shard to FITS.
-        refCat.writeFits(write_path)
+        monsterCat.writeFits(write_path_monster)
 
         if verbose:
-            print('Transformed '+cat_info.path+'/'+str(htmid)+'.fits')
+            print('Transformed shard '+str(htmid))
