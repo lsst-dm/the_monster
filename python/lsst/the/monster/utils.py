@@ -128,6 +128,7 @@ def makeRefCat(refSchema, refTable, survey, bands, reference_name):
 
     return refCat
 
+
 def makeMonsterSchema(gaia_catalog_columns, bands):
     """
     Make the monster refcat schema. Include all columns from Gaia, as well
@@ -159,8 +160,8 @@ def makeMonsterSchema(gaia_catalog_columns, bands):
                        "monster_lsst_y_flux", "monster_lsst_y_fluxErr",
                        "monster_lsst_y_source_flag"]
 
-    fieldtype_dict = {'float32':'F', 'float64':'D',
-                      'int64':'L', 'bool':'B'}
+    fieldtype_dict = {'float32': 'F', 'float64': 'D',
+                      'int64': 'L', 'bool': 'B'}
 
     for col in gaia_catalog_columns:
         if col.name not in exclude_columns:
@@ -177,7 +178,6 @@ def makeMonsterSchema(gaia_catalog_columns, bands):
                                        units=''
                                        )
 
-
     for band in bands:
         fluxcolname = f"monster_lsst_{band}_flux"
         fluxcolname_err = fluxcolname+'Err'
@@ -193,6 +193,7 @@ def makeMonsterSchema(gaia_catalog_columns, bands):
                                units='')
 
     return monsterSchema
+
 
 def makeMonsterCat(monsterSchema, monsterTable):
     """
