@@ -15,29 +15,14 @@ monster refcat by doing the following:
 
 For each shard:
 1. Read the full Gaia DR3 catalog for the shard
-2. Read each of the (already transformed to the DES system) refcats for the
+2. Initialize 18 columns (ugrizy fluxes and their errors, and a source flag
+    (integer)) for the results
+(3-6): Within a loop over surveys in order from lowest to highest priority:
+3. Read each of the (already transformed to the DES system) refcats for the
     shard
-3. Transform each refcat to the (synthetic) LSST system
-4. Initialize 18 columns (ugrizy fluxes and their errors, and a source flag
-    (integer)) with NaN values
+4. Transform each refcat to the (synthetic) LSST system
 5. Match each refcat to the Gaia DR3 catalog
-6. Loop over surveys from lowest to highest priority, updating the fluxes, flux
-    errors, and flags whenever a value is non-NaN
-
-What we want for refcat:
-* Start w/ (all of) Gaia DR3, keeping all those columns
-* Transform from DES to LSST system (naming:
-    “monster_lsst_{band}_flux” + error + source_flag)
-* Add ugrizy flux, flux errors, and source flag (stored as integer) -
-    18 columns total. Set ones with no matches in any photom cats to NaNs
-    (initialize them that way).
-* Keep the whole sky (but don't bother vetting the northern sky)
-* Remember what's in the transformed-to-DES catalogs have already been vetted,
-    so no additional cuts need to happen.
-* Can loop over surveys from lowest-to-highest priority, overwriting whenever
-    there's a match (so that DES (highest priority) will be last)
-* NOTE: color-terms for synth_LSST are over a narrower band than empirical-DES
-    system. Check the validity before accepting.
+6. Update the fluxes, flux errors, and flags whenever a value is non-NaN
 """
 
 
@@ -144,7 +129,6 @@ class AssembleMonsterRefcat:
                     colors = cat_info.get_transformed_mag_colors(cat_stars, band)
                     selected = (colors >= color_range[0]) & (colors <= color_range[1])
 
-                    # selected = cat_info.select_stars(cat_stars, band)
                     flux_not_nan = np.isfinite(cat_stars[f"monster_lsst_{band}_flux"])
                     flag = selected & flux_not_nan
                     cat_stars_selected = cat_stars[flag]
