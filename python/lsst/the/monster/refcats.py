@@ -311,7 +311,7 @@ class RefcatInfo(ABC):
 class GaiaDR3Info(RefcatInfo):
     PATH = "/sdf/data/rubin/shared/the_monster/GAIA_DR3/gaia_dr3"
     NAME = "GaiaDR3"
-    FLAG = "GDR3"
+    FLAG = 999
 
     def get_flux_field(self, band):
         return f"phot_{band.lower()}_mean_flux"
@@ -542,7 +542,7 @@ class VSTInfo(RefcatInfo):
 
 class SynthLSSTInfo(RefcatInfo):
     NAME = "SynthLSST"
-    FLAG = "L"
+    FLAG = 10
     bands = ["u", "g", "r", "i", "z", "y"]
 
     def get_flux_field(self, band):
