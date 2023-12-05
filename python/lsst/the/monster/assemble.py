@@ -4,7 +4,8 @@ import numpy as np
 import lsst.utils
 
 from .splinecolorterms import ColortermSpline
-from .refcats import *
+from .refcats import (GaiaXPInfo, GaiaDR3Info, SkyMapperInfo, PS1Info,
+                      VSTInfo, DESInfo, SynthLSSTInfo)
 from .utils import read_stars, makeMonsterSchema, makeMonsterCat
 
 __all__ = ["AssembleMonsterRefcat"]
@@ -40,7 +41,8 @@ class AssembleMonsterRefcat:
         self.catalog_info_class_list = [cat_info() for cat_info
                                         in catalog_info_class_list]
         synth_info_dict = {'LSST': SynthLSSTInfo}
-        self.synth_info = synth_info_dict[synth_system]()
+        self.synth_system = synth_system
+        self.synth_info = synth_info_dict[self.synth_system]()
         self.testing_mode = testing_mode
         self.write_path_inp = write_path_inp
         self.all_bands = ['u', 'g', 'r', 'i', 'z', 'y']
@@ -49,7 +51,6 @@ class AssembleMonsterRefcat:
             *,
             htmid,
             verbose=False,
-            output_system='lsst'
             ):
         """Match catalogs to Gaia and transform them to 'the_monster'
            reference frame.
@@ -59,6 +60,8 @@ class AssembleMonsterRefcat:
         htmid : `int`
             HTM id of the catalogs.
         """
+
+        output_system = str.lower(self.synth_system)
 
         # Read in the Gaia stars in the htmid.
         gaia_stars_all = read_stars(self.gaia_reference_info.path, [htmid],
@@ -97,7 +100,7 @@ class AssembleMonsterRefcat:
                         lsst.utils.getPackageDir("the_monster"),
                         "colorterms",
                     )
-                    colorterm_file_string = 'DES_to_Synth'+str.upper(output_system)+'_band'
+                    colorterm_file_string = 'DES_to_Synth'+str.upper(self.synth_system)+'_band'
                     colorterm_filename = os.path.join(
                         colorterm_path,
                         colorterm_file_string+f'_{band}.yaml',
@@ -106,7 +109,7 @@ class AssembleMonsterRefcat:
                     # read in spline
                     colorterm_spline = ColortermSpline.load(colorterm_filename)
 
-                    # apply colorterms to transform to Synth{output_system} mag
+                    # apply colorterms to transform to Synth{synth_system} mag
                     band_1, band_2 = cat_info.get_color_bands(band)
                     orig_flux = cat_stars[cat_info.get_transformed_flux_field(band)]
                     orig_flux_err = cat_stars[cat_info.get_transformed_flux_field(band)+'Err']
@@ -126,7 +129,7 @@ class AssembleMonsterRefcat:
                     # Apply selection to only apply transformations within the
                     # useful color range. (Note that the input DES-system
                     # catalogs already had their survey-specific cuts applied,
-                    # so these cuts should be for the Synth{output_system}
+                    # so these cuts should be for the Synth{synth_system}
                     # transformations.)
                     color_range = self.synth_info.get_color_range(band)
                     colors = cat_info.get_transformed_mag_colors(cat_stars, band)
@@ -154,16 +157,22 @@ class AssembleMonsterRefcat:
         # Call this version "monster_v1":
         write_path_monster = "/sdf/data/rubin/shared/the_monster/sharded_refcats/monster_v1"
 
+        if self.write_path_inp is None:
+            write_path = write_path_monster
+        else:
+            write_path = self.write_path_inp
+
         # Output the finished catalog for the shard:
-        os.makedirs(write_path_monster, exist_ok=True)
-        write_path_monster += f"/{htmid}.fits"
+        os.makedirs(write_path, exist_ok=True)
+        write_path += f"/{htmid}.fits"
 
         # Convert the refcat to a SimpleCatalog
-        monsterSchema = makeMonsterSchema(gaia_stars_all.itercols(), self.all_bands)
+        monsterSchema = makeMonsterSchema(gaia_stars_all.itercols(), self.all_bands,
+                                          output_system=output_system)
         monsterCat = makeMonsterCat(monsterSchema, gaia_stars_all)
 
         # Save the shard to FITS.
-        monsterCat.writeFits(write_path_monster)
+        monsterCat.writeFits(write_path)
 
         if verbose:
             print('Transformed shard '+str(htmid))

@@ -129,7 +129,7 @@ def makeRefCat(refSchema, refTable, survey, bands, reference_name):
     return refCat
 
 
-def makeMonsterSchema(gaia_catalog_columns, bands):
+def makeMonsterSchema(gaia_catalog_columns, bands, output_system='lsst'):
     """
     Make the monster refcat schema. Include all columns from Gaia, as well
     as transformed fluxes, flux errors, and flags identifying the source
@@ -141,6 +141,8 @@ def makeMonsterSchema(gaia_catalog_columns, bands):
         Gaia catalog columns (e.g., from "gaia_stars_all.itercols()")
     bands : `List` of `str`
         Names of the bands to include in the monster refcat
+    output_system : `str`
+        Name of the output system to use.
 
     Returns
     -------
@@ -150,15 +152,23 @@ def makeMonsterSchema(gaia_catalog_columns, bands):
     monsterSchema = afwTable.SimpleTable.makeMinimalSchema()
 
     exclude_columns = ["id", "coord_ra", "coord_dec", "monster_lsst_u_flux",
-                       "monster_lsst_u_fluxErr", "monster_lsst_u_source_flag",
-                       "monster_lsst_g_flux", "monster_lsst_g_fluxErr",
-                       "monster_lsst_g_source_flag", "monster_lsst_r_flux",
-                       "monster_lsst_r_fluxErr", "monster_lsst_r_source_flag",
-                       "monster_lsst_i_flux", "monster_lsst_i_fluxErr",
-                       "monster_lsst_i_source_flag", "monster_lsst_z_flux",
-                       "monster_lsst_z_fluxErr", "monster_lsst_z_source_flag",
-                       "monster_lsst_y_flux", "monster_lsst_y_fluxErr",
-                       "monster_lsst_y_source_flag"]
+                       "monster_"+output_system+"_u_fluxErr",
+                       "monster_"+output_system+"_u_source_flag",
+                       "monster_"+output_system+"_g_flux",
+                       "monster_"+output_system+"_g_fluxErr",
+                       "monster_"+output_system+"_g_source_flag",
+                       "monster_"+output_system+"_r_flux",
+                       "monster_"+output_system+"_r_fluxErr",
+                       "monster_"+output_system+"_r_source_flag",
+                       "monster_"+output_system+"_i_flux",
+                       "monster_"+output_system+"_i_fluxErr",
+                       "monster_"+output_system+"_i_source_flag",
+                       "monster_"+output_system+"_z_flux",
+                       "monster_"+output_system+"_z_fluxErr",
+                       "monster_"+output_system+"_z_source_flag",
+                       "monster_"+output_system+"_y_flux",
+                       "monster_"+output_system+"_y_fluxErr",
+                       "monster_"+output_system+"_y_source_flag"]
 
     fieldtype_dict = {'float32': 'F', 'float64': 'D',
                       'int64': 'L', 'bool': 'B'}
@@ -179,17 +189,17 @@ def makeMonsterSchema(gaia_catalog_columns, bands):
                                        )
 
     for band in bands:
-        fluxcolname = f"monster_lsst_{band}_flux"
+        fluxcolname = f"monster_{output_system}_{band}_flux"
         fluxcolname_err = fluxcolname+'Err'
-        flagcolname = f"monster_lsst_{band}_source_flag"
+        flagcolname = f"monster_{output_system}_{band}_source_flag"
         monsterSchema.addField(fluxcolname, type='D',
-                               doc='flux transformed to synthetic LSST system',
+                               doc='flux transformed to synthetic system',
                                units='nJy')
         monsterSchema.addField(fluxcolname_err, type='D',
-                               doc='error on flux transformed to synthetic LSST system',
+                               doc='error on flux transformed to synthetic system',
                                units='nJy')
         monsterSchema.addField(flagcolname, type='I',
-                               doc='source of flux (0:VST, 1:Skymapper, 2:PS1, 3:GaiaXP, 4:DES)',
+                               doc='source of flux (1:VST, 2:Skymapper, 4:PS1, 8:GaiaXP, 16:DES)',
                                units='')
 
     return monsterSchema
@@ -217,5 +227,7 @@ def makeMonsterCat(monsterSchema, monsterTable):
     monsterCat.resize(np.size(monsterTable))
     for col in monsterTable.itercols():
         monsterCat[col.name] = monsterTable[col.name]
+    monsterCat['coord_ra'][:] = np.deg2rad(monsterTable['coord_ra'])
+    monsterCat['coord_dec'][:] = np.deg2rad(monsterTable['coord_dec'])
 
     return monsterCat
