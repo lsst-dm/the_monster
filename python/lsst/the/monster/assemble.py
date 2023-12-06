@@ -51,6 +51,10 @@ class AssembleMonsterRefcat:
         self.all_bands = ['u', 'g', 'r', 'i', 'z', 'y']
         # Default path to write the outputs:
         self.write_path_monster = "/sdf/data/rubin/shared/the_monster/sharded_refcats/monster_v1"
+        if self.write_path_inp is None:
+            self.write_path = self.write_path_monster
+        else:
+            self.write_path = self.write_path_inp
 
     def run(self,
             *,
@@ -159,11 +163,7 @@ class AssembleMonsterRefcat:
                     # from:
                     gaia_stars_all[f"monster_{output_system}_{band}_source_flag"][a] = cat_info.flag
 
-        if self.write_path_inp is None:
-            write_path = self.write_path_monster
-        else:
-            write_path = self.write_path_inp
-
+        write_path = self.write_path
         # Output the finished catalog for the shard:
         os.makedirs(write_path, exist_ok=True)
         write_path += f"/{htmid}.fits"
