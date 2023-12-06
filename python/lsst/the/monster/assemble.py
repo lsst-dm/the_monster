@@ -148,20 +148,23 @@ class AssembleMonsterRefcat:
                     flag = selected & flux_not_nan
                     cat_stars_selected = cat_stars[flag]
 
-                    # Match the transformed catalog to Gaia.
-                    a, b = esutil.numpy_util.match(gaia_stars_all['id'],
-                                                   cat_stars_selected['GaiaDR3_id'])
+                    # Skip cases that have no entries in cat_stars_selected
+                    # (for whatever reason).
+                    if len(cat_stars_selected) > 0:
+                        # Match the transformed catalog to Gaia.
+                        a, b = esutil.numpy_util.match(gaia_stars_all['id'],
+                                                       cat_stars_selected['GaiaDR3_id'])
 
-                    # If the flux measurement is OK, write it to the overall
-                    # Gaia catalog:
-                    flux_col = f"monster_{output_system}_{band}_flux"
-                    gaia_stars_all[flux_col][a] = cat_stars_selected[flux_col][b]
-                    fluxerr_col = flux_col+'Err'
-                    gaia_stars_all[fluxerr_col][a] = cat_stars_selected[fluxerr_col][b]
+                        # If the flux measurement is OK, write it to the
+                        # overall Gaia catalog:
+                        flux_col = f"monster_{output_system}_{band}_flux"
+                        gaia_stars_all[flux_col][a] = cat_stars_selected[flux_col][b]
+                        fluxerr_col = flux_col+'Err'
+                        gaia_stars_all[fluxerr_col][a] = cat_stars_selected[fluxerr_col][b]
 
-                    # Update the flags to denote which survey the flux came
-                    # from:
-                    gaia_stars_all[f"monster_{output_system}_{band}_source_flag"][a] = cat_info.flag
+                        # Update the flags to denote which survey the flux came
+                        # from:
+                        gaia_stars_all[f"monster_{output_system}_{band}_source_flag"][a] = cat_info.flag
 
         write_path = self.write_path
         # Output the finished catalog for the shard:
