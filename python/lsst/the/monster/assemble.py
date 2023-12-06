@@ -40,12 +40,17 @@ class AssembleMonsterRefcat:
         self.gaia_reference_info = gaia_reference_class()
         self.catalog_info_class_list = [cat_info() for cat_info
                                         in catalog_info_class_list]
+        # Dict with lookup info for different synthetic systems. To add a new
+        # system, add its "Info" class to refcats.py and import it here,
+        # and add an entry to this dict to point to that info class.
         synth_info_dict = {'LSST': SynthLSSTInfo}
         self.synth_system = synth_system
         self.synth_info = synth_info_dict[self.synth_system]()
         self.testing_mode = testing_mode
         self.write_path_inp = write_path_inp
         self.all_bands = ['u', 'g', 'r', 'i', 'z', 'y']
+        # Default path to write the outputs:
+        self.write_path_monster = "/sdf/data/rubin/shared/the_monster/sharded_refcats/monster_v1"
 
     def run(self,
             *,
@@ -154,11 +159,8 @@ class AssembleMonsterRefcat:
                     # from:
                     gaia_stars_all[f"monster_{output_system}_{band}_source_flag"][a] = cat_info.flag
 
-        # Call this version "monster_v1":
-        write_path_monster = "/sdf/data/rubin/shared/the_monster/sharded_refcats/monster_v1"
-
         if self.write_path_inp is None:
-            write_path = write_path_monster
+            write_path = self.write_path_monster
         else:
             write_path = self.write_path_inp
 

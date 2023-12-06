@@ -151,36 +151,35 @@ def makeMonsterSchema(gaia_catalog_columns, bands, output_system='lsst'):
 
     monsterSchema = afwTable.SimpleTable.makeMinimalSchema()
 
-    exclude_columns = ["id", "coord_ra", "coord_dec", "monster_lsst_u_flux",
-                       "monster_"+output_system+"_u_fluxErr",
-                       "monster_"+output_system+"_u_source_flag",
-                       "monster_"+output_system+"_g_flux",
-                       "monster_"+output_system+"_g_fluxErr",
-                       "monster_"+output_system+"_g_source_flag",
-                       "monster_"+output_system+"_r_flux",
-                       "monster_"+output_system+"_r_fluxErr",
-                       "monster_"+output_system+"_r_source_flag",
-                       "monster_"+output_system+"_i_flux",
-                       "monster_"+output_system+"_i_fluxErr",
-                       "monster_"+output_system+"_i_source_flag",
-                       "monster_"+output_system+"_z_flux",
-                       "monster_"+output_system+"_z_fluxErr",
-                       "monster_"+output_system+"_z_source_flag",
-                       "monster_"+output_system+"_y_flux",
-                       "monster_"+output_system+"_y_fluxErr",
-                       "monster_"+output_system+"_y_source_flag"]
+    # We want to transfer all the existing Gaia columns to the output table,
+    # as well as the newly-added fluxes, errors, and flags. The "transfer" loop
+    # below takes care of adding the Gaia columns to the schema.
+    # Columns "id", "coord_ra", and "coord_dec" already exist in the minimal
+    # schema that we have initialized, so we don't need to include them in the
+    # loop to transfer entries. Also, the flux/error/flag columns don't have
+    # units in the input table, so we'll treat them separately to add the
+    # units. Thus we exclude them from the "transfer" loop as well.
+    exclude_columns = ["id", "coord_ra", "coord_dec"]
+    for band in bands:
+        exclude_columns.append(f"monster_{output_system}_{band}_flux")
+        exclude_columns.append(f"monster_{output_system}_{band}_fluxErr")
+        exclude_columns.append(f"monster_{output_system}_{band}_source_flag")
 
     fieldtype_dict = {'float32': 'F', 'float64': 'D',
                       'int64': 'L', 'bool': 'B'}
 
+    # Transfer the existing Gaia columns to the new table schema.
     for col in gaia_catalog_columns:
+        # Skip the "exclude_columns," which will get treated separately.
         if col.name not in exclude_columns:
+            # If the Gaia input column had units, use those:
             if col.unit is not None:
                 monsterSchema.addField(col.name,
                                        type=fieldtype_dict[col.dtype.name],
                                        doc=col.description,
                                        units=col.unit.to_string()
                                        )
+            # Otherwise, initialize a unitless column.
             else:
                 monsterSchema.addField(col.name,
                                        type=fieldtype_dict[col.dtype.name],
@@ -188,6 +187,7 @@ def makeMonsterSchema(gaia_catalog_columns, bands, output_system='lsst'):
                                        units=''
                                        )
 
+    # Add columns to the schema for the flux, flux error, and flags.
     for band in bands:
         fluxcolname = f"monster_{output_system}_{band}_flux"
         fluxcolname_err = fluxcolname+'Err'
@@ -227,6 +227,7 @@ def makeMonsterCat(monsterSchema, monsterTable):
     monsterCat.resize(np.size(monsterTable))
     for col in monsterTable.itercols():
         monsterCat[col.name] = monsterTable[col.name]
+    # Convert RA, Dec to radians for the output afwTable
     monsterCat['coord_ra'][:] = np.deg2rad(monsterTable['coord_ra'])
     monsterCat['coord_dec'][:] = np.deg2rad(monsterTable['coord_dec'])
 
