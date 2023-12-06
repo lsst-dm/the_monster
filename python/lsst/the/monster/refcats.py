@@ -16,7 +16,7 @@ class RefcatInfo(ABC):
     NAME = ""
     COLORTERM_PATH = None
 
-    def __init__(self, path=None, write_path=None, name=None):
+    def __init__(self, path=None, write_path=None, name=None, flag=None):
         if path is None:
             self._path = self.PATH
         else:
@@ -43,6 +43,11 @@ class RefcatInfo(ABC):
         else:
             self._name = name
 
+        if flag is None:
+            self._flag = self.FLAG
+        else:
+            self._flag = flag
+
     @property
     def path(self):
         return self._path
@@ -50,6 +55,10 @@ class RefcatInfo(ABC):
     @property
     def write_path(self):
         return self._write_path
+
+    @property
+    def flag(self):
+        return self._flag
 
     def colorterm_file(self, band):
         """Get the colorterm correction file for this band/catalog.
@@ -209,6 +218,50 @@ class RefcatInfo(ABC):
 
         return mag_color
 
+    def get_transformed_flux_field(self, band):
+        """Get the transformed-to-DES flux field associated with a band.
+
+        Parameters
+        ----------
+        band : `str`
+            Name of band to get flux field.
+
+        Returns
+        -------
+        flux_field : `str`
+            Name of flux field appropriate for this catalog.
+        """
+        return f"decam_{band}_from_{self.NAME}_flux"
+
+    def get_transformed_mag_colors(self, catalog, band):
+        """Get magnitude colors appropriate for correcting a given band.
+
+        Parameters
+        ----------
+        catalog : `lsst.afw.table.SimpleCatalog`
+            Input catalog.
+        band : `str`
+            Name of band for doing selection.
+
+        Returns
+        -------
+        colors : `np.ndarray`
+            Array of colors used for color terms for given band.
+        """
+        band_1, band_2 = self.get_color_bands(band)
+
+        flux_color_field_1 = self.get_transformed_flux_field(band_1)
+        flux_color_field_2 = self.get_transformed_flux_field(band_2)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            mag_color_1 = (np.array(catalog[flux_color_field_1])*units.nJy).to_value(units.ABmag)
+            mag_color_2 = (np.array(catalog[flux_color_field_2])*units.nJy).to_value(units.ABmag)
+
+        mag_color = mag_color_1 - mag_color_2
+
+        return mag_color
+
     def select_stars(self, catalog, band):
         """Star selection appropriate for this type of refcat.
 
@@ -258,6 +311,7 @@ class RefcatInfo(ABC):
 class GaiaDR3Info(RefcatInfo):
     PATH = "/sdf/data/rubin/shared/the_monster/GAIA_DR3/gaia_dr3"
     NAME = "GaiaDR3"
+    FLAG = 0
 
     def get_flux_field(self, band):
         return f"phot_{band.lower()}_mean_flux"
@@ -272,6 +326,7 @@ class GaiaDR3Info(RefcatInfo):
 class GaiaXPInfo(RefcatInfo):
     PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/gaia_xp_ps_des_sdss_sm_20221216"
     NAME = "GaiaXP"
+    FLAG = 8
     bands = ["g", "r", "i", "z", "y"]
 
     def get_flux_field(self, band):
@@ -304,6 +359,7 @@ class GaiaXPInfo(RefcatInfo):
 class DESInfo(RefcatInfo):
     PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/des_y6_calibration_stars_20230511"
     NAME = "DES"
+    FLAG = 16
     bands = ["g", "r", "i", "z", "y"]
 
     def get_flux_field(self, band):
@@ -351,6 +407,7 @@ class DESInfo(RefcatInfo):
 class SkyMapperInfo(RefcatInfo):
     PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/sky_mapper_dr2_20221205"
     NAME = "SkyMapper"
+    FLAG = 2
     bands = ["g", "r", "i", "z"]
 
     def get_flux_field(self, band):
@@ -391,6 +448,7 @@ class PS1Info(RefcatInfo):
     PATH = "/fs/ddn/sdf/group/rubin/ncsa-datasets/refcats/htm/v1/ps1_pv3_3pi_20170110"
     WRITE_PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/ps1_transformed"
     NAME = "PS1"
+    FLAG = 4
     bands = ["g", "r", "i", "z", "y"]
 
     def get_flux_field(self, band):
@@ -445,6 +503,7 @@ class PS1Info(RefcatInfo):
 class VSTInfo(RefcatInfo):
     PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/vst_atlas_20221205"
     NAME = "VST"
+    FLAG = 1
     bands = ["g", "r", "i", "z"]
 
     def get_flux_field(self, band):
@@ -483,6 +542,7 @@ class VSTInfo(RefcatInfo):
 
 class SynthLSSTInfo(RefcatInfo):
     NAME = "SynthLSST"
+    FLAG = 32
     bands = ["u", "g", "r", "i", "z", "y"]
 
     def get_flux_field(self, band):
