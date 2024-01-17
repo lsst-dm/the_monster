@@ -324,7 +324,7 @@ class GaiaDR3Info(RefcatInfo):
 
 
 class GaiaXPInfo(RefcatInfo):
-    PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/gaia_xp_ps_des_sdss_sm_20231216"
+    PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/gaia_xp_ps_des_sdss_sm_20240116"
     NAME = "GaiaXP"
     FLAG = 8
     bands = ["g", "r", "i", "z", "y"]
