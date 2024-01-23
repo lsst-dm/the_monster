@@ -396,6 +396,7 @@ class DESInfo(RefcatInfo):
             & (catalog["NGOOD_R"] > 2)
             & (catalog["NGOOD_I"] > 2)
             & (catalog["NGOOD_Z"] > 2)
+            & ((np.array(catalog["MAG_STD_R_flux"])*units.nJy).to_value(units.ABmag) > 16.0)
         )
 
         if band == "y":
