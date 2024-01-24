@@ -28,6 +28,27 @@ For each shard:
 
 
 class AssembleMonsterRefcat:
+    """Assemble the Monster catalog.
+
+    This class will copy Gaia (DR3) columns, and use the associated
+    photometry from the DES-calibrated catalogs. The catalogs are read
+    in reverse priority order so that the final fluxes for any object
+    come from the top priority catalog. At the end the intermediate
+    calibrated catalogs are converted to the final fluxes (e.g. LSST).
+
+    Parameters
+    ----------
+    gaia_reference_class : `RefcatInfo`
+        The input Gaia DR3 RefcatInfo object.
+    catalog_info_class_list : `list` [`RefcatInfo`]
+        Reverse-priority list of catalog info classes for assembly.
+    write_path_inp : `str`, optional
+        Write path, overriding the class config.
+    testing_mode : `bool`, optional
+        Enter testing mode for read_stars?
+    synth_system : `str`, optional
+        Synthetic system to do final conversion.
+    """
     def __init__(self,
                  gaia_reference_class=GaiaDR3Info,
                  catalog_info_class_list=[VSTInfo, SkyMapperInfo,
