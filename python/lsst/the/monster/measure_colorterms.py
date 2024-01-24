@@ -432,7 +432,7 @@ class GaiaXPuDESSLRSplineMeasurer(SplineMeasurer):
     CatInfoClass = DESInfo
     TargetCatInfoClass = GaiaXPuInfo
 
-    target_selection_band = "g"
+    target_selection_band = "u"
     apply_target_colorterm = True
 
     @property
