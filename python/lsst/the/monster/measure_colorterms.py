@@ -31,6 +31,7 @@ class SplineMeasurer:
     fit_mag_offsets = False
     MagOffsetCatInfoClass = None
 
+    target_selection_band = "i"
     apply_target_colorterm = False
 
     testing_mode = False
@@ -96,7 +97,7 @@ class SplineMeasurer:
         target_stars = read_stars(target_info.path, indices, allow_missing=self.testing_mode)
 
         # Cut to the good stars; use i-band as general reference.
-        selected = target_info.select_stars(target_stars, "i")
+        selected = target_info.select_stars(target_stars, self.target_selection_band)
         target_stars = target_stars[selected]
 
         # Read in the Gaia stars in the region.
@@ -416,6 +417,8 @@ class GaiaXPuSplineMeasurer(SplineMeasurer):
     CatInfoClass = GaiaXPuInfo
     TargetCatInfoClass = SDSSInfo
 
+    target_selection_band = "g"
+
     @property
     def n_nodes(self):
         return 8
@@ -429,6 +432,7 @@ class GaiaXPuDESSLRSplineMeasurer(SplineMeasurer):
     CatInfoClass = DESInfo
     TargetCatInfoClass = GaiaXPuInfo
 
+    target_selection_band = "g"
     apply_target_colorterm = True
 
     @property
