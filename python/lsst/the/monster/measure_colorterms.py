@@ -387,7 +387,7 @@ class DESSplineMeasurer(SplineMeasurer):
 
 
 class GaiaXPuSplineMeasurer(SplineMeasurer):
-    CatInfoClass = GaiaXPInfo
+    CatInfoClass = GaiaXPuInfo
     TargetCatInfoClass = SDSSInfo
 
     @property
