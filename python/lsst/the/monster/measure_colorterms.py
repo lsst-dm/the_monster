@@ -7,7 +7,7 @@ from astropy import units
 from lsst.sphgeom import Box, HtmPixelization
 
 from .splinecolorterms import ColortermSplineFitter, ColortermSpline, MagSplineFitter
-from .refcats import GaiaXPInfo, GaiaDR3Info, DESInfo, SkyMapperInfo, PS1Info, VSTInfo
+from .refcats import GaiaXPInfo, GaiaDR3Info, DESInfo, SkyMapperInfo, PS1Info, VSTInfo, SDSSInfo
 from .utils import read_stars
 
 
@@ -18,6 +18,7 @@ __all__ = [
     "PS1SplineMeasurer",
     "VSTSplineMeasurer",
     "DESSplineMeasurer",
+    "GaiaXPuSplineMeasurer",
 ]
 
 
@@ -383,3 +384,16 @@ class VSTSplineMeasurer(SplineMeasurer):
 
 class DESSplineMeasurer(SplineMeasurer):
     CatInfoClass = DESInfo
+
+
+class GaiaXPuSplineMeasurer(SplineMeasurer):
+    CatInfoClass = GaiaXPInfo
+    TargetCatInfoClass = SDSSInfo
+
+    @property
+    def n_nodes(self):
+        return 8
+
+    @property
+    def ra_dec_range(self):
+        return (150, 180, 10, 30)

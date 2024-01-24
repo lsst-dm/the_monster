@@ -7,7 +7,17 @@ import lsst.utils
 from abc import ABC, abstractmethod
 
 
-__all__ = ["GaiaDR3Info", "GaiaXPInfo", "DESInfo", "SkyMapperInfo", "PS1Info", "VSTInfo", "SynthLSSTInfo"]
+__all__ = [
+    "GaiaDR3Info",
+    "GaiaXPInfo",
+    "DESInfo",
+    "SkyMapperInfo",
+    "PS1Info",
+    "VSTInfo",
+    "SynthLSSTInfo",
+    "GaiaXPuInfo",
+    "SDSSInfo",
+]
 
 
 class RefcatInfo(ABC):
@@ -98,7 +108,6 @@ class RefcatInfo(ABC):
         """
         raise NotImplementedError()
 
-    @abstractmethod
     def get_gmi_color_range(self):
         """Get the color range appropriate for the g-i color.
 
@@ -106,9 +115,8 @@ class RefcatInfo(ABC):
         -------
         color_low, color_high : `float`
         """
-        raise NotImplementedError()
+        return (-100.0, 100.0)
 
-    @abstractmethod
     def get_imz_color_range(self):
         """Get the color range appropriate for the i-z color.
 
@@ -116,7 +124,16 @@ class RefcatInfo(ABC):
         -------
         color_low, color_high : `float`
         """
-        raise NotImplementedError()
+        return (-100.0, 100.0)
+
+    def get_gmr_color_range(self):
+        """Get the color range appropriate for the g-r color.
+
+        Returns
+        -------
+        color_low, color_high : `float`
+        """
+        return (-100.0, 100.0)
 
     def get_color_range(self, band):
         """Get the appropriate color range for a given band.
@@ -134,6 +151,8 @@ class RefcatInfo(ABC):
             color_range = self.get_gmi_color_range()
         elif band in ["z", "y"]:
             color_range = self.get_imz_color_range()
+        elif band in ["u"]:
+            color_range = self.get_gmr_color_range()
 
         return color_range
 
@@ -184,6 +203,9 @@ class RefcatInfo(ABC):
         elif band in ["z", "y"]:
             band_1 = "i"
             band_2 = "z"
+        elif band in ["u"]:
+            band_1 = "g"
+            band_2 = "r"
         else:
             raise NotImplementedError("Unsupported band: ", band)
 
@@ -555,3 +577,31 @@ class SynthLSSTInfo(RefcatInfo):
 
     def get_imz_color_range(self):
         return (0.0, 0.6)
+
+
+class GaiaXPuInfo(GaiaXPInfo):
+    FLAG = 64
+
+    def get_flux_field(self, band):
+        return f"Sdss_flux_{band}_flux"
+
+    # This is used for the u-band calibration.
+    def get_gmr_color_range(self):
+        return (0.25, 0.8)
+
+
+class SDSSInfo(RefcatInfo):
+    PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/sdss_16_standards_20221205"
+    NAME = "SDSS"
+    FLAG = 128
+    bands = ["u", "g", "r", "i", "z"]
+
+    def get_flux_field(self, band):
+        return f"psfMag_{band}_flux"
+
+    # This is used for the u-band calibration.
+    def get_gmr_color_range(self):
+        return (0.25, 0.8)
+
+    def get_sn_range(self, band):
+        return (10.0, np.inf)
