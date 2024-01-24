@@ -7,7 +7,7 @@ from astropy import units
 from lsst.sphgeom import Box, HtmPixelization
 
 from .splinecolorterms import ColortermSplineFitter, ColortermSpline, MagSplineFitter
-from .refcats import GaiaXPInfo, GaiaDR3Info, DESInfo, SkyMapperInfo, PS1Info, VSTInfo, SDSSInfo
+from .refcats import GaiaXPInfo, GaiaDR3Info, DESInfo, SkyMapperInfo, PS1Info, VSTInfo, SDSSInfo, GaiaXPuInfo
 from .utils import read_stars
 
 
