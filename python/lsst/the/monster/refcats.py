@@ -385,7 +385,12 @@ class DESInfo(RefcatInfo):
     bands = ["g", "r", "i", "z", "y"]
 
     def get_flux_field(self, band):
-        return f"MAG_STD_{band.upper()}_flux"
+        _band = band
+        # We use the g band in place of the u band (for SLR).
+        if _band == "u":
+            _band = "g"
+
+        return f"MAG_STD_{_band.upper()}_flux"
 
     def get_gmi_color_range(self):
         return (0.5, 3.5)
@@ -591,6 +596,14 @@ class GaiaXPuInfo(GaiaXPInfo):
 
     def get_sn_range(self, band):
         return (10.0, np.inf)
+
+    def colorterm_file(self, band):
+        filename = os.path.join(
+            self._colorterm_path,
+            f"{self.name}_to_SDSS_band_{band}.yaml",
+        )
+
+        return filename
 
 
 class SDSSInfo(RefcatInfo):

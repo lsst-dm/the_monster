@@ -9,7 +9,12 @@ matplotlib.use("Agg")
 import lsst.utils  # noqa: E402
 
 from lsst.the.monster import GaiaDR3Info, GaiaXPInfo, GaiaXPuInfo, DESInfo, PS1Info, SDSSInfo  # noqa: E402
-from lsst.the.monster import GaiaXPSplineMeasurer, PS1SplineMeasurer, GaiaXPuSplineMeasurer  # noqa: E402
+from lsst.the.monster import (  # noqa: E402
+    GaiaXPSplineMeasurer,  # noqa: E402
+    PS1SplineMeasurer,  # noqa: E402
+    GaiaXPuSplineMeasurer,  # noqa: E402
+    GaiaXPuDESSLRSplineMeasurer,  # noqa: E402
+)
 
 
 ROOT = os.path.abspath(os.path.dirname(__file__))
@@ -87,6 +92,18 @@ class GaiaXPuSplineMeasurerTester(GaiaXPuSplineMeasurer):
         return 5
 
 
+class GaiaXPuDESSLRSplineMeasurerTester(GaiaXPuDESSLRSplineMeasurer):
+    CatInfoClass = DESInfoTester
+    TargetCatInfoClass = GaiaXPuInfoTester
+    GaiaCatInfoClass = GaiaDR3InfoTester
+
+    testing_mode = True
+
+    @property
+    def n_nodes(self):
+        return 5
+
+
 class SplineMeasurerTest(lsst.utils.tests.TestCase):
     def test_measure(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -141,6 +158,23 @@ class SplineMeasurerTest(lsst.utils.tests.TestCase):
             for band in ["u"]:
                 self.assertTrue(os.path.isfile(f"TestGaiaXPu_to_TestSDSS_band_{band}_color_term.png"))
                 self.assertTrue(os.path.isfile(f"TestGaiaXPu_to_TestSDSS_band_{band}_flux_residuals.png"))
+
+    def test_gaiaxpu_slr_measure(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            os.chdir(temp_dir)
+
+            measurer = GaiaXPuDESSLRSplineMeasurerTester()
+
+            yaml_files = measurer.measure_spline_fit(bands=["u"])
+
+            # Check that the yaml files were created.
+            for yaml_file in yaml_files:
+                self.assertTrue(os.path.isfile(yaml_file))
+
+            # And check for the QA plots.
+            for band in ["u"]:
+                self.assertTrue(os.path.isfile(f"TestDES_to_TestGaiaXPu_band_{band}_color_term.png"))
+                self.assertTrue(os.path.isfile(f"TestDES_to_TestGaiaXPu_band_{band}_flux_residuals.png"))
 
 
 class TestMemory(lsst.utils.tests.MemoryTestCase):

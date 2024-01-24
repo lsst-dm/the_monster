@@ -19,6 +19,7 @@ __all__ = [
     "VSTSplineMeasurer",
     "DESSplineMeasurer",
     "GaiaXPuSplineMeasurer",
+    "GaiaXPuDESSLRSplineMeasurer",
 ]
 
 
@@ -29,6 +30,8 @@ class SplineMeasurer:
 
     fit_mag_offsets = False
     MagOffsetCatInfoClass = None
+
+    apply_target_colorterm = False
 
     testing_mode = False
 
@@ -171,6 +174,24 @@ class SplineMeasurer:
 
             selected = cat_info.select_stars(cat_stars_matched, band)
             selected &= target_info.select_stars(target_stars_matched, band)
+
+            if self.apply_target_colorterm:
+                # Apply a colorterm to the target flux first.
+                filename = target_info.colorterm_file(band)
+                colorterm_spline = ColortermSpline.load(filename)
+
+                band_1, band_2 = cat_info.get_color_bands(band)
+                orig_flux = flux_target
+                model_flux = colorterm_spline.apply(
+                    target_stars_matched[target_info.get_flux_field(band_1)],
+                    target_stars_matched[target_info.get_flux_field(band_2)],
+                    orig_flux,
+                )
+
+                # Overwrite flux_target and update selected
+                flux_target[:] = model_flux
+
+                selected &= np.isfinite(flux_target)
 
             fitter = ColortermSplineFitter(
                 mag_color[selected],
@@ -402,3 +423,14 @@ class GaiaXPuSplineMeasurer(SplineMeasurer):
     @property
     def ra_dec_range(self):
         return (150, 180, 10, 30)
+
+
+class GaiaXPuDESSLRSplineMeasurer(SplineMeasurer):
+    CatInfoClass = DESInfo
+    TargetCatInfoClass = GaiaXPuInfo
+
+    apply_target_colorterm = True
+
+    @property
+    def n_nodes(self):
+        return 8
