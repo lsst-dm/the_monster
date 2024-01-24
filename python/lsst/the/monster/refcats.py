@@ -589,6 +589,9 @@ class GaiaXPuInfo(GaiaXPInfo):
     def get_gmr_color_range(self):
         return (0.25, 0.8)
 
+    def get_sn_range(self, band):
+        return (10.0, np.inf)
+
 
 class SDSSInfo(RefcatInfo):
     PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/sdss_16_standards_20221205"
