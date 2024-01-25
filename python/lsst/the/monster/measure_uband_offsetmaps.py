@@ -106,6 +106,7 @@ class UbandOffsetMapMaker:
         offset_map = hsp.HealSparseMap.make_empty(32, self.nside, dtype, primary="nmatch_u")
 
         for pixel in pixels:
+            print("Working on pixel ", pixel)
             healpix_poly = healpix_pixelization.pixel(pixel)
 
             htm_pixel_range = htm_pixelization.envelope(healpix_poly)
@@ -118,7 +119,7 @@ class UbandOffsetMapMaker:
             if len(gaia_stars_all) == 0:
                 continue
 
-            nan_column = np.full(len(gaia_stars_all["id"]), np.nan)
+            nan_column = np.full(len(gaia_stars_all), np.nan)
             # We need to add in columns for flux/err for u, g, r.
             for band in u_slr_bands:
                 gaia_stars_all.add_column(nan_column, name=f"{band}_flux")
@@ -148,7 +149,7 @@ class UbandOffsetMapMaker:
                     cat_flux_field = cat_info.get_transformed_flux_field(band)
                     selected = np.isfinite(cat_stars[cat_flux_field])
 
-                    if len(selected) == 0:
+                    if selected.sum() == 0:
                         continue
 
                     cat_stars_selected = cat_stars[selected]
