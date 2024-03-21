@@ -30,3 +30,4 @@ from .measure_uband_offsetmaps import *
 from .refcats import *
 from .splinecolorterms import *
 from .utils import *
+from .measure_uband_slr_colorterm import *
