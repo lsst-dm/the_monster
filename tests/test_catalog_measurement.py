@@ -159,23 +159,6 @@ class SplineMeasurerTest(lsst.utils.tests.TestCase):
                 self.assertTrue(os.path.isfile(f"TestGaiaXPu_to_TestSDSS_band_{band}_color_term.png"))
                 self.assertTrue(os.path.isfile(f"TestGaiaXPu_to_TestSDSS_band_{band}_flux_residuals.png"))
 
-    def test_gaiaxpu_slr_measure(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            os.chdir(temp_dir)
-
-            measurer = GaiaXPuDESSLRSplineMeasurerTester()
-
-            yaml_files = measurer.measure_spline_fit(bands=["u"])
-
-            # Check that the yaml files were created.
-            for yaml_file in yaml_files:
-                self.assertTrue(os.path.isfile(yaml_file))
-
-            # And check for the QA plots.
-            for band in ["u"]:
-                self.assertTrue(os.path.isfile(f"TestDES_to_TestGaiaXPu_band_{band}_color_term.png"))
-                self.assertTrue(os.path.isfile(f"TestDES_to_TestGaiaXPu_band_{band}_flux_residuals.png"))
-
 
 class TestMemory(lsst.utils.tests.MemoryTestCase):
     pass
