@@ -264,12 +264,13 @@ class UbandSLRSplineMeasurer:
             spline_values = pars
             flux_offset = 0.0
 
+        # The slr names will be bands.
         colorterm_init = ColortermSpline(
             uband_slr_info.name,
             uband_ref_info.name,
-            uband_slr_info.get_transformed_flux_field(band_1),
-            uband_slr_info.get_transformed_flux_field(band_2),
-            uband_slr_info.get_transformed_flux_field("u"),
+            band_1,
+            band_2,
+            "g",
             nodes,
             spline_values,
             flux_offset=flux_offset,
@@ -312,9 +313,9 @@ class UbandSLRSplineMeasurer:
         colorterm = ColortermSpline(
             uband_slr_info.name,
             uband_ref_info.name,
-            uband_slr_info.get_transformed_flux_field(band_1),
-            uband_slr_info.get_transformed_flux_field(band_2),
-            uband_slr_info.get_transformed_flux_field("u"),
+            band_1,
+            band_2,
+            "g",
             nodes,
             spline_values,
             flux_offset=flux_offset,
