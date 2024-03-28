@@ -182,11 +182,11 @@ class UbandSLRSplineMeasurer:
 
     @property
     def n_nodes(self):
-        return 10
+        return 7
 
     @property
     def n_mag_nodes(self):
-        return 10
+        return 7
 
     def measure_uband_slr_spline_fit(self, do_plots=True, overwrite=False):
         """Measure the u-band SLR spline fit.
