@@ -48,7 +48,7 @@ class PS1InfoTester(PS1Info):
 
 
 class UbandOffsetMapMakerTest(lsst.utils.tests.TestCase):
-    def test_measure_band_offset_map(self):
+    def test_measure_uband_offset_map(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             os.chdir(temp_dir)
 
