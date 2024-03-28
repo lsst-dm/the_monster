@@ -13,7 +13,6 @@ from lsst.the.monster import (  # noqa: E402
     GaiaXPSplineMeasurer,  # noqa: E402
     PS1SplineMeasurer,  # noqa: E402
     GaiaXPuSplineMeasurer,  # noqa: E402
-    GaiaXPuDESSLRSplineMeasurer,  # noqa: E402
 )
 
 
@@ -83,18 +82,6 @@ class PS1SplineMeasurerTester(PS1SplineMeasurer):
 class GaiaXPuSplineMeasurerTester(GaiaXPuSplineMeasurer):
     CatInfoClass = GaiaXPuInfoTester
     TargetCatInfoClass = SDSSInfoTester
-    GaiaCatInfoClass = GaiaDR3InfoTester
-
-    testing_mode = True
-
-    @property
-    def n_nodes(self):
-        return 5
-
-
-class GaiaXPuDESSLRSplineMeasurerTester(GaiaXPuDESSLRSplineMeasurer):
-    CatInfoClass = DESInfoTester
-    TargetCatInfoClass = GaiaXPuInfoTester
     GaiaCatInfoClass = GaiaDR3InfoTester
 
     testing_mode = True

@@ -19,7 +19,6 @@ __all__ = [
     "VSTSplineMeasurer",
     "DESSplineMeasurer",
     "GaiaXPuSplineMeasurer",
-    "GaiaXPuDESSLRSplineMeasurer",
 ]
 
 
@@ -427,15 +426,3 @@ class GaiaXPuSplineMeasurer(SplineMeasurer):
     @property
     def ra_dec_range(self):
         return (150, 180, 10, 30)
-
-
-class GaiaXPuDESSLRSplineMeasurer(SplineMeasurer):
-    CatInfoClass = DESInfo
-    TargetCatInfoClass = GaiaXPuInfo
-
-    target_selection_band = "u"
-    apply_target_colorterm = True
-
-    @property
-    def n_nodes(self):
-        return 8
