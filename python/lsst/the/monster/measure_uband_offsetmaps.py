@@ -74,15 +74,12 @@ class UbandOffsetMapMaker:
 
         print("Computing u-band offset map.")
 
-        # Read in the colorterm for the reference uband.
-        # ref_colorterm_filename = uband_ref_info.colorterm_file("u")
-        # ref_colorterm_spline = ColortermSpline.load(ref_colorterm_filename)
-
-        # And the SLR colorterm.
+        # Read in the SLR colorterm.
         slr_colorterm_filename = os.path.join(
             uband_slr_info._colorterm_path,
             f"{uband_slr_info.name}_to_GaiaXP_band_u.yaml",
         )
+        print("Using SLR colorterm file: ", slr_colorterm_filename)
         slr_colorterm_spline = ColortermSpline.load(slr_colorterm_filename)
 
         healpix_pixelization = sphgeom.HealpixPixelization(hpg.nside_to_order(self.nside_coarse))
