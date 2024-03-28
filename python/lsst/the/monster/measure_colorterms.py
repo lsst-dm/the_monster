@@ -178,6 +178,7 @@ class SplineMeasurer:
 
             if self.apply_target_colorterm:
                 # Apply a colorterm to the target flux first.
+                raise RuntimeError("I don't think this is used")
                 filename = target_info.colorterm_file(band)
                 colorterm_spline = ColortermSpline.load(filename)
 
