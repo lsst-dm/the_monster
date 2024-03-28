@@ -4,7 +4,6 @@ from astropy import units
 import hpgeom as hpg
 import healsparse as hsp
 import skyproj
-from smatch import Matcher
 import esutil
 import scipy.optimize
 import matplotlib.pyplot as plt
@@ -13,7 +12,7 @@ import lsst.sphgeom as sphgeom
 
 from .refcats import GaiaDR3Info, GaiaXPuInfo, DESInfo, SkyMapperInfo, PS1Info, VSTInfo
 from .splinecolorterms import ColortermSpline
-from .utils import read_stars
+from .measure_uband_slr_colorterm import read_uband_combined_catalog
 
 
 __all__ = [
@@ -62,7 +61,7 @@ class UbandOffsetMapMaker:
         uband_slr_info = self.uband_slr_class()
 
         # These are the bands we are using to transform to u.
-        u_slr_bands = ["g", "r"]
+        # u_slr_bands = ["g", "r"]
 
         fname = f"uband_offset_map_{uband_ref_info.name}.hsp"
 
@@ -76,8 +75,8 @@ class UbandOffsetMapMaker:
         print("Computing u-band offset map.")
 
         # Read in the colorterm for the reference uband.
-        ref_colorterm_filename = uband_ref_info.colorterm_file("u")
-        ref_colorterm_spline = ColortermSpline.load(ref_colorterm_filename)
+        # ref_colorterm_filename = uband_ref_info.colorterm_file("u")
+        # ref_colorterm_spline = ColortermSpline.load(ref_colorterm_filename)
 
         # And the SLR colorterm.
         slr_colorterm_filename = os.path.join(
@@ -114,105 +113,46 @@ class UbandOffsetMapMaker:
             for r in htm_pixel_range.ranges():
                 htm_pixel_list.extend(range(r[0], r[1]))
 
-            # Read in the overall reference catalog.
-            gaia_stars_all = read_stars(gaia_ref_info.path, htm_pixel_list, allow_missing=self.testing_mode)
+            # Read in the combined catalog.
+            gaia_stars_all = read_uband_combined_catalog(
+                gaia_ref_info,
+                cat_info_list,
+                uband_ref_info,
+                htm_pixel_list,
+                testing_mode=self.testing_mode,
+            )
             if len(gaia_stars_all) == 0:
                 continue
 
             nan_column = np.full(len(gaia_stars_all), np.nan)
-            # We need to add in columns for flux/err for u, g, r.
-            for band in u_slr_bands:
-                gaia_stars_all.add_column(nan_column, name=f"{band}_flux")
-                gaia_stars_all.add_column(nan_column, name=f"{band}_fluxErr")
-
-            gaia_stars_all.add_column(nan_column, name="ref_u_flux")
-            gaia_stars_all.add_column(nan_column, name="ref_u_fluxErr")
+            # We need to add a column for the slr u flux and error.
             gaia_stars_all.add_column(nan_column, name="slr_u_flux")
             gaia_stars_all.add_column(nan_column, name="slr_u_fluxErr")
 
-            # Loop over the refcats.
-            for cat_info in cat_info_list:
-                # We read from the "write_path" which has the (DES)
-                # transformed catalog.
-                cat_stars = read_stars(cat_info.write_path, htm_pixel_list, allow_missing=True)
-                if len(cat_stars) == 0:
-                    continue
+            band_1 = slr_colorterm_spline.source_color_field_1
+            band_2 = slr_colorterm_spline.source_color_field_2
+            source_band = slr_colorterm_spline.source_field
 
-                if self.testing_mode:
-                    # We need to hack the catalogs for the test names (sorry).
-                    for name in cat_stars.dtype.names:
-                        if (substr := "_" + cat_info.ORIG_NAME_FOR_TEST + "_") in name:
-                            new_name = name.replace(substr, "_" + cat_info.NAME + "_")
-                            cat_stars.rename_column(name, new_name)
-
-                for band in u_slr_bands:
-                    cat_flux_field = cat_info.get_transformed_flux_field(band)
-                    selected = np.isfinite(cat_stars[cat_flux_field])
-
-                    if selected.sum() == 0:
-                        continue
-
-                    cat_stars_selected = cat_stars[selected]
-
-                    a, b = esutil.numpy_util.match(gaia_stars_all["id"],
-                                                   cat_stars_selected["GaiaDR3_id"])
-                    gaia_stars_all[f"{band}_flux"][a] = cat_stars_selected[cat_flux_field][b]
-                    gaia_stars_all[f"{band}_fluxErr"][a] = cat_stars_selected[cat_flux_field + "Err"][b]
-
-            # And read in the reference catalog, transform, and fill in.
-            uband_ref_stars = read_stars(uband_ref_info.path, htm_pixel_list, allow_missing=True)
-            if len(uband_ref_stars) == 0:
-                # This would be surprising.
-                print(f"No uband ref stars found for coarse pixel {pixel}!")
-                continue
-
-            band_1, band_2 = uband_ref_info.get_color_bands("u")
-            uband_orig_flux = uband_ref_stars[uband_ref_info.get_flux_field("u")]
-            uband_orig_flux_err = uband_ref_stars[uband_ref_info.get_flux_field("u") + "Err"]
-            uband_model_flux = ref_colorterm_spline.apply(
-                uband_ref_stars[uband_ref_info.get_flux_field(band_1)],
-                uband_ref_stars[uband_ref_info.get_flux_field(band_2)],
-                uband_orig_flux,
-            )
-
-            uband_ref_selected = uband_ref_info.select_stars(uband_ref_stars, "u")
-            uband_ref_selected &= np.isfinite(uband_model_flux)
-
-            uband_ref_stars = uband_ref_stars[uband_ref_selected]
-            uband_orig_flux = uband_orig_flux[uband_ref_selected]
-            uband_orig_flux_err = uband_orig_flux_err[uband_ref_selected]
-            uband_model_flux = uband_model_flux[uband_ref_selected]
-
-            with Matcher(gaia_stars_all["coord_ra"], gaia_stars_all["coord_dec"]) as m:
-                idx, i1, i2, d = m.query_knn(
-                    uband_ref_stars["coord_ra"],
-                    uband_ref_stars["coord_dec"],
-                    distance_upper_bound=0.5/3600.,
-                    return_indices=True,
-                )
-
-            gaia_stars_all["ref_u_flux"][i1] = uband_model_flux[i2]
-            gaia_stars_all["ref_u_fluxErr"][i1] = uband_model_flux[i2] * (
-                uband_orig_flux_err[i2]/uband_orig_flux[i2]
-            )
-
-            # We need stars that have good g-r colors for the SLR
-            # measurements.
-            slr_selected = np.isfinite(gaia_stars_all["g_flux"]) & np.isfinite(gaia_stars_all["r_flux"])
+            # At the minimum we will only use stars that we can do the SLR
+            # estimation of u flux.
+            slr_selected = (np.isfinite(gaia_stars_all[f"{band_1}_flux"])
+                            & np.isfinite(gaia_stars_all[f"{band_2}_flux"])
+                            & np.isfinite(gaia_stars_all[f"{source_band}_flux"]))
             gaia_stars_all = gaia_stars_all[slr_selected]
 
-            # Apply the SLR to compute slr_u_flux, slr_u_fluxErr
+            slr_orig_flux = gaia_stars_all[f"{source_band}_flux"]
+            slr_orig_flux_err = gaia_stars_all[f"{source_band}_fluxErr"]
+
             gaia_stars_all["slr_u_flux"] = slr_colorterm_spline.apply(
-                gaia_stars_all["g_flux"],
-                gaia_stars_all["r_flux"],
-                gaia_stars_all["g_flux"],
+                gaia_stars_all[f"{band_1}_flux"],
+                gaia_stars_all[f"{band_2}_flux"],
+                slr_orig_flux,
             )
             gaia_stars_all["slr_u_fluxErr"] = gaia_stars_all["slr_u_flux"] * (
-                gaia_stars_all["g_fluxErr"] / gaia_stars_all["g_flux"]
+                slr_orig_flux_err / slr_orig_flux
             )
 
-            # We only care about stars that have valid
-            # slr u flux OR ref u flux.
+            # Now we select stars that have valid slr u OR ref u.
             u_selected = np.isfinite(gaia_stars_all["ref_u_flux"]) | np.isfinite(gaia_stars_all["slr_u_flux"])
             gaia_stars_all = gaia_stars_all[u_selected]
 
