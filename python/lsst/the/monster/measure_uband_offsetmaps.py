@@ -121,6 +121,15 @@ class UbandOffsetMapMaker:
             if len(gaia_stars_all) == 0:
                 continue
 
+            # Cut down to those that are in the coarse pixel.
+            use, = np.where(hpg.angle_to_pixel(
+                self.nside_coarse,
+                gaia_stars_all["coord_ra"],
+                gaia_stars_all["coord_dec"]) == pixel)
+            if use.size == 0:
+                continue
+            gaia_stars_all = gaia_stars_all[use]
+
             nan_column = np.full(len(gaia_stars_all), np.nan)
             # We need to add a column for the slr u flux and error.
             gaia_stars_all.add_column(nan_column, name="slr_u_flux")
