@@ -17,7 +17,7 @@ ROOT = os.path.abspath(os.path.dirname(__file__))
 
 
 class MonsterMakeOffsetMapsTest(lsst.utils.tests.TestCase):
-    def test_MakeOffsetMapAndPlot(self):
+    def test_makeOffsetMapAndPlot(self):
         # Set up the test.
         htmid = 147267
 
@@ -26,14 +26,12 @@ class MonsterMakeOffsetMapsTest(lsst.utils.tests.TestCase):
 
         with tempfile.TemporaryDirectory() as temp_dir:
             # Use yet another way of hacking in test paths
-            PS1InfoTester.WRITE_PATH = os.path.join(temp_dir, f"{gaia_xp_info.name}_transformed")
-            GaiaXPInfoTester.WRITE_PATH = os.path.join(temp_dir, f"{ps1_info.name}_transformed")
+            PS1InfoTester.TRANSFORMED_PATH = os.path.join(temp_dir, f"{gaia_xp_info.name}_transformed")
+            GaiaXPInfoTester.TRANSFORMED_PATH = os.path.join(temp_dir, f"{ps1_info.name}_transformed")
 
             class PS1MinusGaiaXPOffsetMapMakerTester(PS1MinusGaiaXPOffsetMapMaker):
                 MinuendInfoClass = PS1InfoTester
                 SubtrahendInfoClass = GaiaXPInfoTester
-
-                match_id_name = "TestGaiaDR3_id"
 
             os.chdir(temp_dir)
 

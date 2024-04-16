@@ -79,9 +79,9 @@ def read_uband_combined_catalog(
 
     # Loop over the refcats.
     for cat_info in cat_info_list:
-        # We read from the "write_path" which has the (DES)
+        # We read from the "transformed_path" which has the (DES)
         # transformed catalog.
-        cat_stars = read_stars(cat_info.write_path, htm_pixel_list, allow_missing=True)
+        cat_stars = read_stars(cat_info.transformed_path, htm_pixel_list, allow_missing=True)
         if len(cat_stars) == 0:
             continue
 

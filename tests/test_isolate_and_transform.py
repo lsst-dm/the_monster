@@ -51,7 +51,7 @@ class MonsterMatchAndTransformTest(lsst.utils.tests.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             os.chdir(temp_dir)
             mat = MatchAndTransform(catalog_info_class_list=[self.TargetCatInfoClass],
-                                    write_path_inp=temp_dir,
+                                    transformed_path_inp=temp_dir,
                                     gaia_reference_class=self.GaiaDR3CatInfoClass,
                                     )
 

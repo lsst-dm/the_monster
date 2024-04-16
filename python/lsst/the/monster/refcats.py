@@ -22,23 +22,23 @@ __all__ = [
 
 class RefcatInfo(ABC):
     PATH = ""
-    WRITE_PATH = None
+    TRANSFORMED_PATH = None
     NAME = ""
     COLORTERM_PATH = None
 
-    def __init__(self, path=None, write_path=None, name=None, flag=None):
+    def __init__(self, path=None, transformed_path=None, name=None, flag=None):
         if path is None:
             self._path = self.PATH
         else:
             self._path = path
 
-        if write_path is None:
-            if self.WRITE_PATH is None:
-                self._write_path = self._path + "_transformed"
+        if transformed_path is None:
+            if self.TRANSFORMED_PATH is None:
+                self._transformed_path = self._path + "_transformed"
             else:
-                self._write_path = self.WRITE_PATH
+                self._transformed_path = self.TRANSFORMED_PATH
         else:
-            self._write_path = write_path
+            self._transformed_path = transformed_path
 
         if self.COLORTERM_PATH is None:
             self._colorterm_path = os.path.join(
@@ -63,8 +63,8 @@ class RefcatInfo(ABC):
         return self._path
 
     @property
-    def write_path(self):
-        return self._write_path
+    def transformed_path(self):
+        return self._transformed_path
 
     @property
     def flag(self):
@@ -478,7 +478,7 @@ class SkyMapperInfo(RefcatInfo):
 
 class PS1Info(RefcatInfo):
     PATH = "/fs/ddn/sdf/group/rubin/ncsa-datasets/refcats/htm/v1/ps1_pv3_3pi_20170110"
-    WRITE_PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/ps1_transformed"
+    TRANSFORMED_PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/ps1_transformed"
     NAME = "PS1"
     FLAG = 4
     bands = ["g", "r", "i", "z", "y"]
