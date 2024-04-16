@@ -66,6 +66,7 @@ class UbandOffsetMapMakerTest(lsst.utils.tests.TestCase):
 
             self.assertTrue(os.path.isfile("uslr-uxp_full_map.png"))
             self.assertTrue(os.path.isfile("uslr-uxp_highglat_map.png"))
+            self.assertTrue(os.path.isfile("uslr_nstar.png"))
             # The histogram fails in the tiny test.
 
 

@@ -222,6 +222,17 @@ class UbandOffsetMapMaker:
         fig.savefig("uslr-uxp_full_map.png")
         plt.close(fig)
 
+        # Plot the number of SLR stars in the map.
+        plt.clf()
+        fig = plt.figure(figsize=(16, 6))
+        ax = fig.add_subplot(111)
+
+        sp = skyproj.McBrydeSkyproj(ax=ax)
+        sp.draw_hspmap(offset_map["nslr_u"], zoom=True)
+        sp.draw_colorbar(label="# SLR Stars (nside {self.nside})")
+        fig.savefig("uslr_nstar.png")
+        plt.close(fig)
+
         # And cut low Galactic latitude regions.
         l, b = esutil.coords.eq2gal(valid_ra, valid_dec)
         low, = np.where(np.abs(b) < 30.0)
