@@ -229,7 +229,7 @@ class UbandOffsetMapMaker:
 
         sp = skyproj.McBrydeSkyproj(ax=ax)
         sp.draw_hspmap(offset_map["nslr_u"], zoom=True)
-        sp.draw_colorbar(label="# SLR Stars (nside {self.nside})")
+        sp.draw_colorbar(label=f"# SLR Stars (nside {self.nside})")
         fig.savefig("uslr_nstar.png")
         plt.close(fig)
 
