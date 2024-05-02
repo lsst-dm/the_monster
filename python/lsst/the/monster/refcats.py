@@ -8,15 +8,15 @@ from abc import ABC, abstractmethod
 
 
 __all__ = [
+    "DESInfo",
     "GaiaDR3Info",
     "GaiaXPInfo",
-    "DESInfo",
-    "SkyMapperInfo",
-    "PS1Info",
-    "VSTInfo",
-    "SynthLSSTInfo",
     "GaiaXPuInfo",
+    "PS1Info",
     "SDSSInfo",
+    "SkyMapperInfo",
+    "SynthLSSTInfo",
+    "VSTInfo",
 ]
 
 
@@ -210,6 +210,23 @@ class RefcatInfo(ABC):
             raise NotImplementedError("Unsupported band: ", band)
 
         return band_1, band_2
+
+    def get_slr_band(self, band):
+        """Get the appropriate band for SLR measurements.
+
+        Parameters
+        ----------
+        band : `str`
+            Band to get SLR corrections from.
+
+        Returns
+        -------
+        slr_band : `str`
+        """
+        if band == "u":
+            return "g"
+        else:
+            return band
 
     def get_mag_colors(self, catalog, band):
         """Get magnitude colors appropriate for correcting a given band.
