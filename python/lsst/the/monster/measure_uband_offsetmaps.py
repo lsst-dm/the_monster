@@ -60,9 +60,6 @@ class UBandOffsetMapMaker:
         uband_ref_info = self.uband_ref_class()
         uband_slr_info = self.uband_slr_class()
 
-        # These are the bands we are using to transform to u.
-        # u_slr_bands = ["g", "r"]
-
         fname = f"uband_offset_map_{uband_ref_info.name}.hsp"
 
         if os.path.isfile(fname):
