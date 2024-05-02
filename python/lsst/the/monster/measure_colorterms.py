@@ -414,6 +414,11 @@ class DESSplineMeasurer(SplineMeasurer):
 
 
 class GaiaXPuSplineMeasurer(SplineMeasurer):
+    # This measurer is used to standardize the Gaia XP "SDSS u" band
+    # into calibrated SDSS u, with color corrections based on the
+    # g-r color.  Therefore, the target selection is based on the
+    # g-band signal-to-noise.
+
     CatInfoClass = GaiaXPuInfo
     TargetCatInfoClass = SDSSInfo
 
