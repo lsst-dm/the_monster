@@ -14,8 +14,8 @@ from .refcats import RefcatInfo
 
 
 __all__ = [
-    "UBandSLRSplineMeasurer",
     "read_uband_combined_catalog",
+    "UBandSLRSplineMeasurer",
 ]
 
 
@@ -61,7 +61,7 @@ def read_uband_combined_catalog(
     gaia_stars_all : `astropy.table.Table`
         Table of stars, with fluxes filled in.
     """
-    u_slr_bands = ["g", "r"]
+    u_slr_bands = uband_ref_info.get_color_bands("u")
 
     gaia_stars_all = read_stars(gaia_ref_info.path, htm_pixel_list, allow_missing=testing_mode)
 
@@ -229,9 +229,11 @@ class UBandSLRSplineMeasurer:
 
         _combined_info = _CombinedInfo()
 
+        slr_band = _combined_info.get_slr_band("u")
+
         mag_color = _combined_info.get_mag_colors(gaia_stars_all, "u")
         flux_target = gaia_stars_all[_combined_info.get_flux_field("u")]
-        flux_cat = gaia_stars_all[_combined_info.get_flux_field("g")]
+        flux_cat = gaia_stars_all[_combined_info.get_flux_field(slr_band)]
 
         color_range = uband_slr_info.get_color_range("u")
 
@@ -239,9 +241,9 @@ class UBandSLRSplineMeasurer:
 
         # All selections have already been applied, we only
         # need to check that the stars have u/g/r fluxes.
-        selected = (np.isfinite(gaia_stars_all["ref_u_flux"])
-                    & np.isfinite(gaia_stars_all["g_flux"])
-                    & np.isfinite(gaia_stars_all["r_flux"]))
+        selected = np.isfinite(gaia_stars_all["ref_u_flux"])
+        for band in _combined_info.get_color_bands("u"):
+            selected &= (np.isfinite(gaia_stars_all[f"{band}_flux"]))
 
         # Do the first round of the SLR fit.
         fitter = ColortermSplineFitter(
@@ -270,7 +272,7 @@ class UBandSLRSplineMeasurer:
             uband_ref_info.name,
             band_1,
             band_2,
-            "g",
+            slr_band,
             nodes,
             spline_values,
             flux_offset=flux_offset,
@@ -281,9 +283,9 @@ class UBandSLRSplineMeasurer:
 
         if self.do_fit_mag_offsets:
             model_flux = colorterm_init.apply(
-                gaia_stars_all[_combined_info.get_flux_field("g")],
-                gaia_stars_all[_combined_info.get_flux_field("r")],
-                gaia_stars_all[_combined_info.get_flux_field("g")],
+                gaia_stars_all[_combined_info.get_flux_field(band_1)],
+                gaia_stars_all[_combined_info.get_flux_field(band_2)],
+                gaia_stars_all[_combined_info.get_flux_field(slr_band)],
             )
 
             selected2 = selected & np.isfinite(model_flux)
@@ -315,7 +317,7 @@ class UBandSLRSplineMeasurer:
             uband_ref_info.name,
             band_1,
             band_2,
-            "g",
+            slr_band,
             nodes,
             spline_values,
             flux_offset=flux_offset,
@@ -331,8 +333,8 @@ class UBandSLRSplineMeasurer:
         if do_plots:
             ratio_extent = np.nanpercentile(flux_cat[selected]/flux_target[selected], [0.5, 99.5])
 
-            xlabel = "g - r"
-            ylabel = f"g/{uband_ref_info.name}_u"
+            xlabel = f"{band_1} - {band_2}"
+            ylabel = f"{slr_band}/{uband_ref_info.name}_u"
 
             xvals = np.linspace(color_range[0], color_range[1], 1000)
             yvals = 1./np.array(colorterm.spline.interpolate(xvals))
@@ -354,9 +356,9 @@ class UBandSLRSplineMeasurer:
             plt.savefig(f"transformed_to_{uband_ref_info.name}_band_g_slr.png")
 
             flux_target_corr = colorterm.apply(
-                gaia_stars_all[_combined_info.get_flux_field("g")],
-                gaia_stars_all[_combined_info.get_flux_field("r")],
-                gaia_stars_all[_combined_info.get_flux_field("g")],
+                gaia_stars_all[_combined_info.get_flux_field(band_1)],
+                gaia_stars_all[_combined_info.get_flux_field(band_2)],
+                gaia_stars_all[_combined_info.get_flux_field(slr_band)],
             )
             resid = (flux_target_corr[selected] - flux_target[selected])/flux_target[selected]
 
