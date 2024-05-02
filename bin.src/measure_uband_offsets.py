@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-from lsst.the.monster import UbandOffsetMapMaker
+from lsst.the.monster import UBandOffsetMapMaker
 
 
-measurer = UbandOffsetMapMaker()
+measurer = UBandOffsetMapMaker()
 fname = measurer.measure_uband_offset_map()
 measurer.plot_uband_offset_maps(fname)

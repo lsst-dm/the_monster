@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-from lsst.the.monster import UbandSLRSplineMeasurer
+from lsst.the.monster import UBandSLRSplineMeasurer
 
 
-measurer = UbandSLRSplineMeasurer()
+measurer = UBandSLRSplineMeasurer()
 measurer.measure_uband_slr_spline_fit()

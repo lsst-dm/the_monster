@@ -9,7 +9,7 @@ matplotlib.use("Agg")
 import lsst.utils  # noqa: E402
 
 from lsst.the.monster import GaiaDR3Info, GaiaXPInfo, GaiaXPuInfo, DESInfo, PS1Info  # noqa: E402
-from lsst.the.monster import UbandOffsetMapMaker  # noqa: E402
+from lsst.the.monster import UBandOffsetMapMaker  # noqa: E402
 
 
 ROOT = os.path.abspath(os.path.dirname(__file__))
@@ -47,12 +47,12 @@ class PS1InfoTester(PS1Info):
     COLORTERM_PATH = os.path.join(ROOT, "data", "colorterms")
 
 
-class UbandOffsetMapMakerTest(lsst.utils.tests.TestCase):
+class UBandOffsetMapMakerTest(lsst.utils.tests.TestCase):
     def test_measure_uband_offset_map(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             os.chdir(temp_dir)
 
-            measurer = UbandOffsetMapMaker(
+            measurer = UBandOffsetMapMaker(
                 gaia_reference_class=GaiaDR3InfoTester,
                 catalog_info_class_list=[PS1InfoTester, DESInfoTester],
                 uband_ref_class=GaiaXPuInfoTester,

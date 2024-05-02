@@ -16,11 +16,11 @@ from .measure_uband_slr_colorterm import read_uband_combined_catalog
 
 
 __all__ = [
-    "UbandOffsetMapMaker",
+    "UBandOffsetMapMaker",
 ]
 
 
-class UbandOffsetMapMaker:
+class UBandOffsetMapMaker:
     def __init__(
         self,
         gaia_reference_class=GaiaDR3Info,

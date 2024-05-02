@@ -3,13 +3,13 @@ import unittest
 import tempfile
 
 # Ensure that matplotlib doesn't try to open a display during testing.
-# import matplotlib
-# matplotlib.use("Agg")
+import matplotlib
+matplotlib.use("Agg")
 
 import lsst.utils  # noqa: E402
 
 from lsst.the.monster import GaiaDR3Info, GaiaXPuInfo, DESInfo, PS1Info  # noqa: E402
-from lsst.the.monster import UbandSLRSplineMeasurer  # noqa: E402
+from lsst.the.monster import UBandSLRSplineMeasurer  # noqa: E402
 
 
 ROOT = os.path.abspath(os.path.dirname(__file__))
@@ -41,7 +41,7 @@ class PS1InfoTester(PS1Info):
     COLORTERM_PATH = os.path.join(ROOT, "data", "colorterms")
 
 
-class UbandSLRSplineMeasurerTester(UbandSLRSplineMeasurer):
+class UBandSLRSplineMeasurerTester(UBandSLRSplineMeasurer):
     @property
     def ra_dec_range(self):
         return (40.0, 60.0, -30.0, -20.0)
@@ -55,12 +55,12 @@ class UbandSLRSplineMeasurerTester(UbandSLRSplineMeasurer):
         return 5
 
 
-class UbandSLRSplineMeasurerTest(lsst.utils.tests.TestCase):
+class UBandSLRSplineMeasurerTest(lsst.utils.tests.TestCase):
     def test_measure_uband_slr_spline(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             os.chdir(temp_dir)
 
-            measurer = UbandSLRSplineMeasurerTester(
+            measurer = UBandSLRSplineMeasurerTester(
                 gaia_reference_class=GaiaDR3InfoTester,
                 catalog_info_class_list=[
                     PS1InfoTester,

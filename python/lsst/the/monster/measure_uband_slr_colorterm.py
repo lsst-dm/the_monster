@@ -14,7 +14,7 @@ from .refcats import RefcatInfo
 
 
 __all__ = [
-    "UbandSLRSplineMeasurer",
+    "UBandSLRSplineMeasurer",
     "read_uband_combined_catalog",
 ]
 
@@ -148,7 +148,7 @@ def read_uband_combined_catalog(
     return gaia_stars_all
 
 
-class UbandSLRSplineMeasurer:
+class UBandSLRSplineMeasurer:
     def __init__(
         self,
         gaia_reference_class=GaiaDR3Info,
