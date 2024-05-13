@@ -1,0 +1,16 @@
+flux_offset: 15620.936735818943
+nodes:
+- 0.05
+- 0.23333333333333334
+- 0.41666666666666663
+- 0.6
+source_color_field_1: MAG_STD_I_flux
+source_color_field_2: MAG_STD_Z_flux
+source_field: MAG_STD_Y_flux
+source_survey: DES
+spline_values:
+- 0.9367348077997054
+- 0.9009252214925696
+- 0.8987139612679271
+- 0.8524737208537932
+target_survey: LATISS

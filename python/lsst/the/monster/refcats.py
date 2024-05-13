@@ -642,3 +642,18 @@ class SDSSInfo(RefcatInfo):
 
     def get_sn_range(self, band):
         return (10.0, np.inf)
+
+
+class LATISSInfo(RefcatInfo):
+    NAME = "LATISS"
+    FLAG = 256
+    bands = ["g", "r", "i", "z", "y"]
+
+    def get_flux_field(self, band):
+        return f"{band}_flux"
+
+    def get_gmi_color_range(self):
+        return (0.5, 2.0)
+
+    def get_imz_color_range(self):
+        return (0.05, 0.6)
