@@ -33,7 +33,7 @@ class MatchAndTransform:
         The input Gaia DR3 RefcatInfo object.
     catalog_info_class_list : `list` [`RefcatInfo`]
         List of RefcatInfo objects for catalogs to transform.
-    write_path_inp : `str`, optional
+    transformed_path_inp : `str`, optional
         The path to write the outputs to.
     testing_mode : `bool`
         Enter testing mode for read_stars?
@@ -43,7 +43,7 @@ class MatchAndTransform:
                  gaia_reference_class=GaiaDR3Info,
                  catalog_info_class_list=[GaiaXPInfo, SkyMapperInfo,
                                           PS1Info, VSTInfo, DESInfo],
-                 write_path_inp=None,
+                 transformed_path_inp=None,
                  testing_mode=False,
                  ):
 
@@ -51,7 +51,7 @@ class MatchAndTransform:
         self.catalog_info_class_list = [cat_info() for cat_info
                                         in catalog_info_class_list]
         self.testing_mode = testing_mode
-        self.write_path_inp = write_path_inp
+        self.transformed_path_inp = transformed_path_inp
 
     def run(self,
             *,
@@ -140,14 +140,14 @@ class MatchAndTransform:
                     n_measurements[np.isfinite(cat_stars[f"decam_{band}_from_{cat_info.name}_flux"])] += 1
                 cat_stars = cat_stars[n_measurements > 0]
 
-                if self.write_path_inp is None:
-                    write_path = cat_info.write_path
+                if self.transformed_path_inp is None:
+                    transformed_path = cat_info.transformed_path
                 else:
-                    write_path = self.write_path_inp
+                    transformed_path = self.transformed_path_inp
 
-                if os.path.exists(write_path) is False:
-                    os.makedirs(write_path)
-                write_path += f"/{htmid}.fits"
+                if os.path.exists(transformed_path) is False:
+                    os.makedirs(transformed_path)
+                output_file = os.path.join(transformed_path, f"{htmid}.fits")
 
                 # Convert the refcat to a SimpleCatalog
                 refSchema = makeRefSchema(cat_info.name, cat_info.bands,
@@ -157,7 +157,7 @@ class MatchAndTransform:
                                     self.gaia_reference_info.name)
 
                 # Save the shard to FITS.
-                refCat.writeFits(write_path)
+                refCat.writeFits(output_file)
 
                 if verbose:
                     print('Transformed '+cat_info.path+'/'+str(htmid)+'.fits')

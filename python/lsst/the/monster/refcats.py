@@ -7,28 +7,38 @@ import lsst.utils
 from abc import ABC, abstractmethod
 
 
-__all__ = ["GaiaDR3Info", "GaiaXPInfo", "DESInfo", "SkyMapperInfo", "PS1Info", "VSTInfo", "SynthLSSTInfo"]
+__all__ = [
+    "DESInfo",
+    "GaiaDR3Info",
+    "GaiaXPInfo",
+    "GaiaXPuInfo",
+    "PS1Info",
+    "SDSSInfo",
+    "SkyMapperInfo",
+    "SynthLSSTInfo",
+    "VSTInfo",
+]
 
 
 class RefcatInfo(ABC):
     PATH = ""
-    WRITE_PATH = None
+    TRANSFORMED_PATH = None
     NAME = ""
     COLORTERM_PATH = None
 
-    def __init__(self, path=None, write_path=None, name=None, flag=None):
+    def __init__(self, path=None, transformed_path=None, name=None, flag=None):
         if path is None:
             self._path = self.PATH
         else:
             self._path = path
 
-        if write_path is None:
-            if self.WRITE_PATH is None:
-                self._write_path = self._path + "_transformed"
+        if transformed_path is None:
+            if self.TRANSFORMED_PATH is None:
+                self._transformed_path = self._path + "_transformed"
             else:
-                self._write_path = self.WRITE_PATH
+                self._transformed_path = self.TRANSFORMED_PATH
         else:
-            self._write_path = write_path
+            self._transformed_path = transformed_path
 
         if self.COLORTERM_PATH is None:
             self._colorterm_path = os.path.join(
@@ -53,8 +63,8 @@ class RefcatInfo(ABC):
         return self._path
 
     @property
-    def write_path(self):
-        return self._write_path
+    def transformed_path(self):
+        return self._transformed_path
 
     @property
     def flag(self):
@@ -98,7 +108,6 @@ class RefcatInfo(ABC):
         """
         raise NotImplementedError()
 
-    @abstractmethod
     def get_gmi_color_range(self):
         """Get the color range appropriate for the g-i color.
 
@@ -106,9 +115,8 @@ class RefcatInfo(ABC):
         -------
         color_low, color_high : `float`
         """
-        raise NotImplementedError()
+        return (-100.0, 100.0)
 
-    @abstractmethod
     def get_imz_color_range(self):
         """Get the color range appropriate for the i-z color.
 
@@ -116,7 +124,16 @@ class RefcatInfo(ABC):
         -------
         color_low, color_high : `float`
         """
-        raise NotImplementedError()
+        return (-100.0, 100.0)
+
+    def get_gmr_color_range(self):
+        """Get the color range appropriate for the g-r color.
+
+        Returns
+        -------
+        color_low, color_high : `float`
+        """
+        return (-100.0, 100.0)
 
     def get_color_range(self, band):
         """Get the appropriate color range for a given band.
@@ -134,6 +151,8 @@ class RefcatInfo(ABC):
             color_range = self.get_gmi_color_range()
         elif band in ["z", "y"]:
             color_range = self.get_imz_color_range()
+        elif band in ["u"]:
+            color_range = self.get_gmr_color_range()
 
         return color_range
 
@@ -184,10 +203,30 @@ class RefcatInfo(ABC):
         elif band in ["z", "y"]:
             band_1 = "i"
             band_2 = "z"
+        elif band in ["u"]:
+            band_1 = "g"
+            band_2 = "r"
         else:
             raise NotImplementedError("Unsupported band: ", band)
 
         return band_1, band_2
+
+    def get_slr_band(self, band):
+        """Get the appropriate band for SLR measurements.
+
+        Parameters
+        ----------
+        band : `str`
+            Band to get SLR corrections from.
+
+        Returns
+        -------
+        slr_band : `str`
+        """
+        if band == "u":
+            return "g"
+        else:
+            return band
 
     def get_mag_colors(self, catalog, band):
         """Get magnitude colors appropriate for correcting a given band.
@@ -363,13 +402,22 @@ class DESInfo(RefcatInfo):
     bands = ["g", "r", "i", "z", "y"]
 
     def get_flux_field(self, band):
-        return f"MAG_STD_{band.upper()}_flux"
+        _band = band
+        # We use the g band in place of the u band (for SLR).
+        if _band == "u":
+            _band = "g"
+
+        return f"MAG_STD_{_band.upper()}_flux"
 
     def get_gmi_color_range(self):
         return (0.5, 3.5)
 
     def get_imz_color_range(self):
         return (0.0, 0.8)
+
+    def get_gmr_color_range(self):
+        # This is used for u-band SLR calibrations.
+        return (0.4, 0.7)
 
     def get_mag_range(self, band):
         if band == "g":
@@ -396,6 +444,7 @@ class DESInfo(RefcatInfo):
             & (catalog["NGOOD_R"] > 2)
             & (catalog["NGOOD_I"] > 2)
             & (catalog["NGOOD_Z"] > 2)
+            & ((np.array(catalog["MAG_STD_R_flux"])*units.nJy).to_value(units.ABmag) > 16.0)
         )
 
         if band == "y":
@@ -446,7 +495,7 @@ class SkyMapperInfo(RefcatInfo):
 
 class PS1Info(RefcatInfo):
     PATH = "/fs/ddn/sdf/group/rubin/ncsa-datasets/refcats/htm/v1/ps1_pv3_3pi_20170110"
-    WRITE_PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/ps1_transformed"
+    TRANSFORMED_PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/ps1_transformed"
     NAME = "PS1"
     FLAG = 4
     bands = ["g", "r", "i", "z", "y"]
@@ -554,3 +603,42 @@ class SynthLSSTInfo(RefcatInfo):
 
     def get_imz_color_range(self):
         return (0.0, 0.6)
+
+
+class GaiaXPuInfo(GaiaXPInfo):
+    FLAG = 64
+
+    def get_flux_field(self, band):
+        return f"Sdss_flux_{band}_flux"
+
+    # This is used for the u-band calibration.
+    def get_gmr_color_range(self):
+        return (0.25, 0.8)
+
+    def get_sn_range(self, band):
+        return (10.0, np.inf)
+
+    def colorterm_file(self, band):
+        filename = os.path.join(
+            self._colorterm_path,
+            f"{self.name}_to_SDSS_band_{band}.yaml",
+        )
+
+        return filename
+
+
+class SDSSInfo(RefcatInfo):
+    PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/sdss_16_standards_20221205"
+    NAME = "SDSS"
+    FLAG = 128
+    bands = ["u", "g", "r", "i", "z"]
+
+    def get_flux_field(self, band):
+        return f"psfMag_{band}_flux"
+
+    # This is used for the u-band calibration.
+    def get_gmr_color_range(self):
+        return (0.25, 0.8)
+
+    def get_sn_range(self, band):
+        return (10.0, np.inf)

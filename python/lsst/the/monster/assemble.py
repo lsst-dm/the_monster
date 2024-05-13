@@ -28,11 +28,35 @@ For each shard:
 
 
 class AssembleMonsterRefcat:
+    # Name of ID to use for matching.
+    match_id_name = "GaiaDR3_id"
+
+    """Assemble the Monster catalog.
+
+    This class will copy Gaia (DR3) columns, and use the associated
+    photometry from the DES-calibrated catalogs. The catalogs are read
+    in reverse priority order so that the final fluxes for any object
+    come from the top priority catalog. At the end the intermediate
+    calibrated catalogs are converted to the final fluxes (e.g. LSST).
+
+    Parameters
+    ----------
+    gaia_reference_class : `RefcatInfo`
+        The input Gaia DR3 RefcatInfo object.
+    catalog_info_class_list : `list` [`RefcatInfo`]
+        Reverse-priority list of catalog info classes for assembly.
+    monster_path_inp : `str`, optional
+        Output monster path, overriding the class config.
+    testing_mode : `bool`, optional
+        Enter testing mode for read_stars?
+    synth_system : `str`, optional
+        Synthetic system to do final conversion.
+    """
     def __init__(self,
                  gaia_reference_class=GaiaDR3Info,
                  catalog_info_class_list=[VSTInfo, SkyMapperInfo,
                                           PS1Info, GaiaXPInfo, DESInfo],
-                 write_path_inp=None,
+                 monster_path_inp=None,
                  testing_mode=False,
                  synth_system='LSST',
                  ):
@@ -47,14 +71,9 @@ class AssembleMonsterRefcat:
         self.synth_system = synth_system
         self.synth_info = synth_info_dict[self.synth_system]()
         self.testing_mode = testing_mode
-        self.write_path_inp = write_path_inp
         self.all_bands = ['u', 'g', 'r', 'i', 'z', 'y']
         # Default path to write the outputs:
-        self.write_path_monster = "/sdf/data/rubin/shared/the_monster/sharded_refcats/monster_v1"
-        if self.write_path_inp is None:
-            self.write_path = self.write_path_monster
-        else:
-            self.write_path = self.write_path_inp
+        self.monster_path_inp = monster_path_inp
 
     def run(self,
             *,
@@ -96,12 +115,11 @@ class AssembleMonsterRefcat:
                 # cat_info = self.CatInfoClass() e.g. gaia cat
 
                 # Read in star cat that has already been transformed to the DES
-                # system (if it exists). Note the use of "write_path" instead
-                # of "path" here, so that it gets the transformed catalog.
-                if os.path.isfile(cat_info.write_path+'/'+str(htmid)+'.fits')\
+                # system (if it exists).
+                if os.path.isfile(cat_info.transformed_path+'/'+str(htmid)+'.fits')\
                         and band in cat_info.bands:
 
-                    cat_stars = read_stars(cat_info.write_path, [htmid],
+                    cat_stars = read_stars(cat_info.transformed_path, [htmid],
                                            allow_missing=self.testing_mode)
 
                     # Transform from the DES to the synthetic system:
@@ -166,10 +184,14 @@ class AssembleMonsterRefcat:
                         # from:
                         gaia_stars_all[f"monster_{output_system}_{band}_source_flag"][a] = cat_info.flag
 
-        write_path = self.write_path
+        if self.monster_path_inp is None:
+            monster_path = "/sdf/data/rubin/shared/the_monster/sharded_refcats/monster_v1"
+        else:
+            monster_path = self.monster_path_inp
+
         # Output the finished catalog for the shard:
-        os.makedirs(write_path, exist_ok=True)
-        write_path += f"/{htmid}.fits"
+        os.makedirs(monster_path, exist_ok=True)
+        output_file = os.path.join(monster_path, f"{htmid}.fits")
 
         # Convert the refcat to a SimpleCatalog
         monsterSchema = makeMonsterSchema(gaia_stars_all.itercols(), self.all_bands,
@@ -177,7 +199,7 @@ class AssembleMonsterRefcat:
         monsterCat = makeMonsterCat(monsterSchema, gaia_stars_all)
 
         # Save the shard to FITS.
-        monsterCat.writeFits(write_path)
+        monsterCat.writeFits(output_file)
 
         if verbose:
             print('Transformed shard '+str(htmid))

@@ -7,7 +7,7 @@ from astropy import units
 from lsst.sphgeom import Box, HtmPixelization
 
 from .splinecolorterms import ColortermSplineFitter, ColortermSpline, MagSplineFitter
-from .refcats import GaiaXPInfo, GaiaDR3Info, DESInfo, SkyMapperInfo, PS1Info, VSTInfo
+from .refcats import GaiaXPInfo, GaiaDR3Info, DESInfo, SkyMapperInfo, PS1Info, VSTInfo, SDSSInfo, GaiaXPuInfo
 from .utils import read_stars
 
 
@@ -18,6 +18,7 @@ __all__ = [
     "PS1SplineMeasurer",
     "VSTSplineMeasurer",
     "DESSplineMeasurer",
+    "GaiaXPuSplineMeasurer",
 ]
 
 
@@ -28,6 +29,9 @@ class SplineMeasurer:
 
     fit_mag_offsets = False
     MagOffsetCatInfoClass = None
+
+    target_selection_band = "i"
+    apply_target_colorterm = False
 
     testing_mode = False
 
@@ -53,7 +57,12 @@ class SplineMeasurer:
         """
         return (45.0, 55.0, -30.0, -20.0)
 
-    def measure_spline_fit(self, bands=["g", "r", "i", "z", "y"], do_plots=True, overwrite=False):
+    def measure_spline_fit(
+        self,
+        bands=["g", "r", "i", "z", "y"],
+        do_plots=True,
+        overwrite=False,
+    ):
         """Measure the spline fit, and save to a yaml file.
 
         Parameters
@@ -81,14 +90,14 @@ class SplineMeasurer:
         for (begin, end) in rs:
             indices.extend(range(begin, end))
 
-        des_info = self.TargetCatInfoClass()
+        target_info = self.TargetCatInfoClass()
 
-        # Read in all the DES stars in the region.
-        des_stars = read_stars(des_info.path, indices, allow_missing=self.testing_mode)
+        # Read in all the TARGET stars in the region.
+        target_stars = read_stars(target_info.path, indices, allow_missing=self.testing_mode)
 
         # Cut to the good stars; use i-band as general reference.
-        selected = des_info.select_stars(des_stars, "i")
-        des_stars = des_stars[selected]
+        selected = target_info.select_stars(target_stars, self.target_selection_band)
+        target_stars = target_stars[selected]
 
         # Read in the Gaia stars in the region.
         gaia_info = self.GaiaCatInfoClass()
@@ -96,7 +105,7 @@ class SplineMeasurer:
         gaia_stars = read_stars(gaia_info.path, indices, allow_missing=self.testing_mode)
 
         # Match these together.
-        with Matcher(des_stars["coord_ra"], des_stars["coord_dec"]) as m:
+        with Matcher(target_stars["coord_ra"], target_stars["coord_dec"]) as m:
             idx, i1, i2, d = m.query_knn(
                 gaia_stars["coord_ra"],
                 gaia_stars["coord_dec"],
@@ -104,14 +113,14 @@ class SplineMeasurer:
                 return_indices=True,
             )
 
-        des_stars = des_stars[i1]
+        target_stars = target_stars[i1]
 
         # Now the actual running.
         cat_info = self.CatInfoClass()
 
         cat_stars = read_stars(cat_info.path, indices, allow_missing=self.testing_mode)
 
-        with Matcher(des_stars["coord_ra"], des_stars["coord_dec"]) as m:
+        with Matcher(target_stars["coord_ra"], target_stars["coord_dec"]) as m:
             idx, i1, i2, d = m.query_knn(
                 cat_stars["coord_ra"],
                 cat_stars["coord_dec"],
@@ -119,7 +128,7 @@ class SplineMeasurer:
                 return_indices=True,
             )
 
-        des_stars_matched = des_stars[i1]
+        target_stars_matched = target_stars[i1]
         cat_stars_matched = cat_stars[i2]
 
         if self.fit_mag_offsets:
@@ -154,9 +163,9 @@ class SplineMeasurer:
         yaml_files = []
 
         for band in bands:
-            print(f"Working on transformations from {cat_info.name} to {des_info.name} for {band}")
+            print(f"Working on transformations from {cat_info.name} to {target_info.name} for {band}")
             mag_color = cat_info.get_mag_colors(cat_stars_matched, band)
-            flux_des = des_stars_matched[des_info.get_flux_field(band)]
+            flux_target = target_stars_matched[target_info.get_flux_field(band)]
             flux_cat = cat_stars_matched[cat_info.get_flux_field(band)]
 
             color_range = cat_info.get_color_range(band)
@@ -164,11 +173,30 @@ class SplineMeasurer:
             nodes = np.linspace(color_range[0], color_range[1], self.n_nodes)
 
             selected = cat_info.select_stars(cat_stars_matched, band)
-            selected &= des_info.select_stars(des_stars_matched, band)
+            selected &= target_info.select_stars(target_stars_matched, band)
+
+            if self.apply_target_colorterm:
+                # Apply a colorterm to the target flux first.
+                raise RuntimeError("I don't think this is used")
+                filename = target_info.colorterm_file(band)
+                colorterm_spline = ColortermSpline.load(filename)
+
+                band_1, band_2 = cat_info.get_color_bands(band)
+                orig_flux = flux_target
+                model_flux = colorterm_spline.apply(
+                    target_stars_matched[target_info.get_flux_field(band_1)],
+                    target_stars_matched[target_info.get_flux_field(band_2)],
+                    orig_flux,
+                )
+
+                # Overwrite flux_target and update selected
+                flux_target[:] = model_flux
+
+                selected &= np.isfinite(flux_target)
 
             fitter = ColortermSplineFitter(
                 mag_color[selected],
-                flux_des[selected],
+                flux_target[selected],
                 flux_cat[selected],
                 nodes,
                 fit_flux_offset=self.do_fit_flux_offset,
@@ -188,7 +216,7 @@ class SplineMeasurer:
 
             colorterm_init = ColortermSpline(
                 cat_info.name,
-                des_info.name,
+                target_info.name,
                 cat_info.get_flux_field(band_1),
                 cat_info.get_flux_field(band_2),
                 cat_info.get_flux_field(band),
@@ -264,7 +292,7 @@ class SplineMeasurer:
             # Create an spline object to serialize it.
             colorterm = ColortermSpline(
                 cat_info.name,
-                des_info.name,
+                target_info.name,
                 cat_info.get_flux_field(band_1),
                 cat_info.get_flux_field(band_2),
                 cat_info.get_flux_field(band),
@@ -275,17 +303,17 @@ class SplineMeasurer:
                 mag_spline_values=mag_spline_values,
             )
 
-            yaml_file = f"{cat_info.name}_to_{des_info.name}_band_{band}.yaml"
+            yaml_file = f"{cat_info.name}_to_{target_info.name}_band_{band}.yaml"
             colorterm.save(yaml_file, overwrite=overwrite)
 
             yaml_files.append(yaml_file)
 
             # Create QA plots if desired.
             if do_plots:
-                ratio_extent = np.nanpercentile(flux_cat[selected]/flux_des[selected], [0.5, 99.5])
+                ratio_extent = np.nanpercentile(flux_cat[selected]/flux_target[selected], [0.5, 99.5])
 
                 xlabel = f"{band_1} - {band_2}"
-                ylabel = f"{cat_info.name}_{band}/{des_info.name}_{band}"
+                ylabel = f"{cat_info.name}_{band}/{target_info.name}_{band}"
 
                 xvals = np.linspace(color_range[0], color_range[1], 1000)
                 yvals = 1./np.array(colorterm.spline.interpolate(xvals))
@@ -293,7 +321,7 @@ class SplineMeasurer:
                 plt.clf()
                 plt.hexbin(
                     mag_color[selected],
-                    (flux_cat[selected] - flux_offset)/flux_des[selected],
+                    (flux_cat[selected] - flux_offset)/flux_target[selected],
                     bins="log",
                     extent=[color_range[0], color_range[1], ratio_extent[0], ratio_extent[1]],
                 )
@@ -304,25 +332,25 @@ class SplineMeasurer:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore", UserWarning)
                     plt.tight_layout()
-                plt.savefig(f"{cat_info.name}_to_{des_info.name}_band_{band}_color_term.png")
+                plt.savefig(f"{cat_info.name}_to_{target_info.name}_band_{band}_color_term.png")
 
                 flux_target_corr = colorterm.apply(
                     np.array(cat_stars_matched[cat_info.get_flux_field(band_1)]),
                     np.array(cat_stars_matched[cat_info.get_flux_field(band_2)]),
                     np.array(flux_cat),
                 )
-                resid = (flux_target_corr[selected] - flux_des[selected])/flux_des[selected]
+                resid = (flux_target_corr[selected] - flux_target[selected])/flux_target[selected]
 
                 resid_extent = np.nanpercentile(resid, [0.5, 99.5])
 
                 xlabel2 = f"mag_{band} ({cat_info.name})"
 
-                mag_des_selected = (np.array(flux_des[selected])*units.nJy).to_value(units.ABmag)
-                mag_extent = np.nanpercentile(mag_des_selected, [0.5, 99.5])
+                mag_target_selected = (np.array(flux_target[selected])*units.nJy).to_value(units.ABmag)
+                mag_extent = np.nanpercentile(mag_target_selected, [0.5, 99.5])
 
                 plt.clf()
                 plt.hexbin(
-                    mag_des_selected,
+                    mag_target_selected,
                     resid,
                     bins='log',
                     extent=[mag_extent[0], mag_extent[1], resid_extent[0], resid_extent[1]],
@@ -334,7 +362,7 @@ class SplineMeasurer:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore", UserWarning)
                     plt.tight_layout()
-                plt.savefig(f"{cat_info.name}_to_{des_info.name}_band_{band}_flux_residuals.png")
+                plt.savefig(f"{cat_info.name}_to_{target_info.name}_band_{band}_flux_residuals.png")
 
                 # Additional plots for magnitude offset pars.
                 if self.fit_mag_offsets:
@@ -383,3 +411,23 @@ class VSTSplineMeasurer(SplineMeasurer):
 
 class DESSplineMeasurer(SplineMeasurer):
     CatInfoClass = DESInfo
+
+
+class GaiaXPuSplineMeasurer(SplineMeasurer):
+    # This measurer is used to standardize the Gaia XP "SDSS u" band
+    # into calibrated SDSS u, with color corrections based on the
+    # g-r color.  Therefore, the target selection is based on the
+    # g-band signal-to-noise.
+
+    CatInfoClass = GaiaXPuInfo
+    TargetCatInfoClass = SDSSInfo
+
+    target_selection_band = "g"
+
+    @property
+    def n_nodes(self):
+        return 8
+
+    @property
+    def ra_dec_range(self):
+        return (150, 180, 10, 30)

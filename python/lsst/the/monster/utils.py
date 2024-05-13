@@ -52,6 +52,10 @@ def read_stars(path, indices, allow_missing=False):
     stars["coord_ra"].convert_unit_to(units.degree)
     stars["coord_dec"].convert_unit_to(units.degree)
 
+    # This is to patch test files.
+    if "TestGaiaDR3_id" in stars.columns:
+        stars.rename_column("TestGaiaDR3_id", "GaiaDR3_id")
+
     return stars
 
 

@@ -87,7 +87,7 @@ class MonsterAssembleTest(lsst.utils.tests.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             os.chdir(temp_dir)
             amr = AssembleMonsterRefcat(catalog_info_class_list=[self.TargetCatInfoClass],
-                                        write_path_inp=temp_dir,
+                                        monster_path_inp=temp_dir,
                                         gaia_reference_class=self.GaiaDR3CatInfoClass,
                                         synth_system=self.synthSystem
                                         )

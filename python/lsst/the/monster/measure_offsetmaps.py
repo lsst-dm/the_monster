@@ -85,8 +85,8 @@ class OffsetMapMaker:
 
         print(f"Computing offset maps for {minuend_info.name} - {subtrahend_info.name}")
 
-        minuend_path = minuend_info.write_path
-        subtrahend_path = subtrahend_info.write_path
+        minuend_path = minuend_info.transformed_path
+        subtrahend_path = subtrahend_info.transformed_path
 
         if bands is None:
             minuend_bands = set(minuend_info.bands)
