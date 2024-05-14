@@ -375,7 +375,7 @@ class GaiaXPInfo(RefcatInfo):
         return f"Decam_flux_{_band}_flux"
 
     def get_gmi_color_range(self):
-        return (0.5, 3.0)
+        return (0.3, 3.0)
 
     def get_imz_color_range(self):
         return (0.0, 0.7)
@@ -410,7 +410,7 @@ class DESInfo(RefcatInfo):
         return f"MAG_STD_{_band.upper()}_flux"
 
     def get_gmi_color_range(self):
-        return (0.5, 3.5)
+        return (0.0, 3.5)
 
     def get_imz_color_range(self):
         return (0.0, 0.8)
@@ -463,7 +463,7 @@ class SkyMapperInfo(RefcatInfo):
         return f"{band}_psf_flux"
 
     def get_gmi_color_range(self):
-        return (0.5, 2.7)
+        return (0.2, 2.7)
 
     def get_imz_color_range(self):
         return (0.0, 0.7)
@@ -504,7 +504,7 @@ class PS1Info(RefcatInfo):
         return f"{band}_flux"
 
     def get_gmi_color_range(self):
-        return (0.5, 2.8)
+        return (0.3, 2.8)
 
     def get_imz_color_range(self):
         return (0.0, 0.7)
@@ -599,7 +599,7 @@ class SynthLSSTInfo(RefcatInfo):
 
     # These color ranges are determined by the template stars.
     def get_gmi_color_range(self):
-        return (0.5, 3.0)
+        return (0.3, 3.0)
 
     def get_imz_color_range(self):
         return (0.0, 0.6)
