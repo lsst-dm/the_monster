@@ -494,7 +494,7 @@ class SkyMapperInfo(RefcatInfo):
 
 
 class PS1Info(RefcatInfo):
-    PATH = "/fs/ddn/sdf/group/rubin/ncsa-datasets/refcats/htm/v1/ps1_pv3_3pi_20170110"
+    PATH = "/sdf/group/rubin/datasets/refcats/htm/v1/ps1_pv3_3pi_20170110"
     TRANSFORMED_PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/ps1_transformed"
     NAME = "PS1"
     FLAG = 4
