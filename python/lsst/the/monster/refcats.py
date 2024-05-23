@@ -417,7 +417,7 @@ class DESInfo(RefcatInfo):
 
     def get_gmr_color_range(self):
         # This is used for u-band SLR calibrations.
-        return (0.4, 0.7)
+        return (0.23, 0.7)
 
     def get_mag_range(self, band):
         if band == "g":
