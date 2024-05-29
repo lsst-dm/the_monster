@@ -7,12 +7,14 @@ import skyproj
 import esutil
 import scipy.optimize
 import matplotlib.pyplot as plt
+from smatch import Matcher
 
 import lsst.sphgeom as sphgeom
 
 from .refcats import GaiaDR3Info, GaiaXPuInfo, DESInfo, SkyMapperInfo, PS1Info, VSTInfo
 from .splinecolorterms import ColortermSpline
 from .measure_uband_slr_colorterm import read_uband_combined_catalog
+from .utils import read_stars
 
 
 __all__ = [
@@ -43,7 +45,8 @@ class UBandOffsetMapMaker:
         self.htm_level = 7
 
     def measure_uband_offset_map(self, overwrite=False):
-        """Measure the u-band offset map, and save to a healsparse file.
+        """Measure the SLR computed u-band offset map, and save to a
+        healsparse file.
 
         Parameters
         ----------
@@ -194,7 +197,160 @@ class UBandOffsetMapMaker:
 
         return fname
 
-    def plot_uband_offset_maps(self, hsp_file):
+    def measure_uband_offset_map_direct(self, overwrite=False):
+        """Measure the direct u-band offset map, and save to a
+        healsparse file.
+
+        Parameters
+        ----------
+        overwrite : `bool`, optional
+            Overwrite an existing map file.
+
+        Returns
+        -------
+        hsp_file : `str`
+            Name of healsparse file with maps.
+        """
+        if len(self.catalog_info_class_list) != 1:
+            raise RuntimeError("Direct computation can only use 1 catalog info class.")
+
+        gaia_ref_info = self.gaia_reference_class()
+        cat_info = self.catalog_info_class_list[0]()
+        uband_ref_info = self.uband_ref_class()
+
+        fname = f"uband_offset_map_direct_{cat_info.name}-{uband_ref_info.name}.hsp"
+
+        if os.path.isfile(fname):
+            if overwrite:
+                print(f"Found existing {fname}; will overwrite.")
+            else:
+                print(f"Found existing {fname}; overwrite=False so no need to remake map.")
+                return fname
+
+        print("Computing direct u-band offset map.")
+
+        healpix_pixelization = sphgeom.HealpixPixelization(hpg.nside_to_order(self.nside_coarse))
+        htm_pixelization = sphgeom.HtmPixelization(self.htm_level)
+
+        if not self.testing_mode:
+            pixels = np.arange(hpg.nside_to_npixel(self.nside_coarse), dtype=np.int64)
+        else:
+            box = sphgeom.Box.fromDegrees(150, 10, 180, 30)
+            rs = healpix_pixelization.envelope(box)
+            pixels = []
+            for (begin, end) in rs:
+                pixels.extend(range(begin, end))
+
+        dtype = [("nref_u", "i4"),
+                 ("ncat_u", "i4"),
+                 ("nmatch_u", "i4"),
+                 ("offset_u", "f4")]
+
+        offset_map = hsp.HealSparseMap.make_empty(32, self.nside, dtype, primary="nmatch_u")
+
+        for pixel in pixels:
+            print("Working on pixel ", pixel)
+            healpix_poly = healpix_pixelization.pixel(pixel)
+
+            htm_pixel_range = htm_pixelization.envelope(healpix_poly)
+            htm_pixel_list = []
+            for r in htm_pixel_range.ranges():
+                htm_pixel_list.extend(range(r[0], r[1]))
+
+            # Read in the reference catalog. We are using the code in a
+            # mode to read in the reference u-band and associate with
+            # Gaia only. Association with our comparison catalog is
+            # below.
+            gaia_stars_all = read_uband_combined_catalog(
+                gaia_ref_info,
+                [],
+                uband_ref_info,
+                htm_pixel_list,
+                testing_mode=self.testing_mode,
+            )
+            if len(gaia_stars_all) == 0:
+                continue
+
+            # Read in the comparison catalog.
+            uband_stars = read_stars(cat_info.path, htm_pixel_list, allow_missing=True)
+
+            # Apply the transformation.
+            colorterm_spline = ColortermSpline.load(cat_info.colorterm_file("u"))
+
+            band_1, band_2 = cat_info.get_color_bands("u")
+            uband_orig_flux = uband_stars[cat_info.get_flux_field("u")]
+            uband_orig_flux_err = uband_stars[cat_info.get_flux_field("u") + "Err"]
+            uband_model_flux = colorterm_spline.apply(
+                uband_stars[cat_info.get_flux_field(band_1)],
+                uband_stars[cat_info.get_flux_field(band_2)],
+                uband_orig_flux,
+            )
+
+            uband_selected = cat_info.select_stars(uband_stars, "u")
+            uband_selected &= np.isfinite(uband_model_flux)
+
+            uband_stars = uband_stars[uband_selected]
+            uband_orig_flux = uband_orig_flux[uband_selected]
+            uband_orig_flux_err = uband_orig_flux_err[uband_selected]
+            uband_model_flux = uband_model_flux[uband_selected]
+
+            with Matcher(gaia_stars_all["coord_ra"], gaia_stars_all["coord_dec"]) as m:
+                idx, i1, i2, d = m.query_knn(
+                    uband_stars["coord_ra"],
+                    uband_stars["coord_dec"],
+                    distance_upper_bound=0.5/3600.,
+                    return_indices=True,
+                )
+
+            nan_column = np.full(len(gaia_stars_all), np.nan)
+            gaia_stars_all.add_column(nan_column, name="cat_u_flux")
+            gaia_stars_all.add_column(nan_column, name="cat_u_fluxErr")
+
+            gaia_stars_all["cat_u_flux"][i1] = uband_model_flux[i2]
+            gaia_stars_all["cat_u_fluxErr"][i1] = uband_model_flux[i2] * (
+                uband_orig_flux_err[i2]/uband_orig_flux[i2]
+            )
+
+            # Now we select stars that have valid u band in both
+            u_selected = np.isfinite(gaia_stars_all["ref_u_flux"]) & np.isfinite(gaia_stars_all["cat_u_flux"])
+            gaia_stars_all = gaia_stars_all[u_selected]
+
+            ipnest = hpg.angle_to_pixel(self.nside, gaia_stars_all["coord_ra"], gaia_stars_all["coord_dec"])
+            h, rev = esutil.stat.histogram(ipnest, rev=True)
+
+            pixuse, = np.where(h > 0)
+
+            for pixind in pixuse:
+                i1a = rev[rev[pixind]: rev[pixind + 1]]
+
+                element = np.zeros(1, dtype=dtype)
+
+                # Number of reference u-band stars?
+                selected_uref = np.isfinite(gaia_stars_all["ref_u_flux"][i1a])
+                element["nref_u"] = selected_uref.sum()
+
+                # Number of SLR u-band stars?
+                selected_uslr = np.isfinite(gaia_stars_all["cat_u_flux"][i1a])
+                element["ncat_u"] = selected_uslr.sum()
+
+                # Number of matched stars?
+                selected_matched = selected_uref & selected_uslr
+                element["nmatch_u"] = selected_matched.sum()
+
+                if element["nmatch_u"] > 1:
+                    slr_u_mag = (gaia_stars_all["cat_u_flux"][i1a[selected_matched]]
+                                 * units.nJy).to_value(units.ABmag)
+                    ref_u_mag = (gaia_stars_all["ref_u_flux"][i1a[selected_matched]]
+                                 * units.nJy).to_value(units.ABmag)
+                    element["offset_u"] = np.median(slr_u_mag - ref_u_mag)
+
+                offset_map[ipnest[i1a[0]]] = element
+
+        offset_map.write(fname, clobber=overwrite)
+
+        return fname
+
+    def plot_uband_offset_maps(self, hsp_file, mode="slr"):
         """Plot uband offset maps (and histograms) from a map file.
 
         Parameters
@@ -217,6 +373,13 @@ class UBandOffsetMapMaker:
 
         valid_pixels, valid_ra, valid_dec = offset.valid_pixels_pos(return_pixels=True)
 
+        if mode == "slr":
+            label = "SLR u - XP u (mmag)"
+            fname_base = "uslr-uxp"
+        else:
+            label = "XP u - SDSS u (mmag)"
+            fname_base = "uxp-usdss"
+
         # First we plot the full u-band offset map.
         plt.clf()
         fig = plt.figure(figsize=(16, 6))
@@ -224,20 +387,32 @@ class UBandOffsetMapMaker:
 
         sp = skyproj.McBrydeSkyproj(ax=ax)
         sp.draw_hspmap(offset*1000., zoom=True)
-        sp.draw_colorbar(label="SLR u - XP u (mmag)")
-        fig.savefig("uslr-uxp_full_map.png")
+        sp.draw_colorbar(label=label)
+        fig.savefig(f"{fname_base}_full_map.png")
         plt.close(fig)
 
-        # Plot the number of SLR stars in the map.
-        plt.clf()
-        fig = plt.figure(figsize=(16, 6))
-        ax = fig.add_subplot(111)
+        if mode == "slr":
+            # Plot the number of SLR stars in the map.
+            plt.clf()
+            fig = plt.figure(figsize=(16, 6))
+            ax = fig.add_subplot(111)
 
-        sp = skyproj.McBrydeSkyproj(ax=ax)
-        sp.draw_hspmap(offset_map["nslr_u"], zoom=True)
-        sp.draw_colorbar(label=f"# SLR Stars (nside {self.nside})")
-        fig.savefig("uslr_nstar.png")
-        plt.close(fig)
+            sp = skyproj.McBrydeSkyproj(ax=ax)
+            sp.draw_hspmap(offset_map["nslr_u"], zoom=True)
+            sp.draw_colorbar(label=f"# SLR Stars (nside {self.nside})")
+            fig.savefig("uslr_nstar.png")
+            plt.close(fig)
+        else:
+            # Plot the number of matched stars.
+            plt.clf()
+            fig = plt.figure(figsize=(16, 6))
+            ax = fig.add_subplot(111)
+
+            sp = skyproj.McBrydeSkyproj(ax=ax)
+            sp.draw_hspmap(offset_map["nmatch_u"], zoom=True)
+            sp.draw_colorbar(label=f"# Matched Stars (nside {self.nside})")
+            fig.savefig("umatch_xp_sdss_nstar.png")
+            plt.close(fig)
 
         # And cut low Galactic latitude regions.
         l, b = esutil.coords.eq2gal(valid_ra, valid_dec)
@@ -252,8 +427,8 @@ class UBandOffsetMapMaker:
 
         sp = skyproj.McBrydeSkyproj(ax=ax)
         sp.draw_hspmap(offset*1000., zoom=True)
-        sp.draw_colorbar(label="SLR u - XP u (mmag)")
-        fig.savefig("uslr-uxp_highglat_map.png")
+        sp.draw_colorbar(label=label)
+        fig.savefig(f"{fname_base}_highglat_map.png")
         plt.close(fig)
 
         # Fit a Gaussian to the high galactic latitude.
@@ -285,7 +460,7 @@ class UBandOffsetMapMaker:
         yvals = gauss(xvals, *coeff)
 
         plt.plot(xvals, yvals, "k--", linewidth=3)
-        plt.xlabel("SLR u - XP u (mmag)")
+        plt.xlabel(label)
         plt.ylabel(f"Number of nside={offset.nside_sparse} pixels")
         plt.annotate(
             r"$\mu = %.1f\,\mathrm{mmag}$" % (coeff[1]),
@@ -304,4 +479,4 @@ class UBandOffsetMapMaker:
             va="top",
         )
 
-        plt.savefig("uslr-uxp_highglat_hist.png")
+        plt.savefig(f"{fname_base}_highglat_hist.png")
