@@ -315,6 +315,9 @@ class UBandOffsetMapMaker:
             u_selected = np.isfinite(gaia_stars_all["ref_u_flux"]) & np.isfinite(gaia_stars_all["cat_u_flux"])
             gaia_stars_all = gaia_stars_all[u_selected]
 
+            if len(gaia_stars_all) == 0:
+                continue
+
             ipnest = hpg.angle_to_pixel(self.nside, gaia_stars_all["coord_ra"], gaia_stars_all["coord_dec"])
             h, rev = esutil.stat.histogram(ipnest, rev=True)
 

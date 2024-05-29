@@ -63,6 +63,11 @@ def read_uband_combined_catalog(
     """
     u_slr_bands = uband_ref_info.get_color_bands("u")
 
+    # Read these in first, to "fail" fast.
+    uband_ref_stars = read_stars(uband_ref_info.path, htm_pixel_list, allow_missing=True)
+    if len(uband_ref_stars) == 0:
+        return []
+
     gaia_stars_all = read_stars(gaia_ref_info.path, htm_pixel_list, allow_missing=testing_mode)
 
     if len(gaia_stars_all) == 0:
@@ -106,13 +111,7 @@ def read_uband_combined_catalog(
             gaia_stars_all[f"{band}_flux"][a] = cat_stars_selected[cat_flux_field][b]
             gaia_stars_all[f"{band}_fluxErr"][a] = cat_stars_selected[cat_flux_field + "Err"][b]
 
-    # And read in the reference catalog, transform, and fill in.
-    uband_ref_stars = read_stars(uband_ref_info.path, htm_pixel_list, allow_missing=True)
-    if len(uband_ref_stars) == 0:
-        # This would be surprising.
-        print(f"No uband ref stars found for pixels {htm_pixel_list}!")
-        return gaia_stars_all
-
+    # Work with the reference stars.
     ref_colorterm_spline = ColortermSpline.load(uband_ref_info.colorterm_file("u"))
 
     band_1, band_2 = uband_ref_info.get_color_bands("u")
