@@ -643,6 +643,18 @@ class SDSSInfo(RefcatInfo):
     def get_sn_range(self, band):
         return (10.0, np.inf)
 
+    def colorterm_file(self, band):
+        if band == "u":
+            # This is not transformed.
+            filename = os.path.join(
+                self._colorterm_path,
+                f"{self.name}_to_SDSS_band_{band}.yaml",
+            )
+        else:
+            filename = super().colorterm_file(band)
+
+        return filename
+
 
 class LATISSInfo(RefcatInfo):
     NAME = "LATISS"
