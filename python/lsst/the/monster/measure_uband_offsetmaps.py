@@ -88,7 +88,10 @@ class UBandOffsetMapMaker:
         if not self.testing_mode:
             pixels = np.arange(hpg.nside_to_npixel(self.nside_coarse), dtype=np.int64)
         else:
-            box = sphgeom.Box.fromDegrees(20, -40, 40, -20)
+            if "SDSS" in uband_ref_info.name:
+                box = sphgeom.Box.fromDegrees(150, 10, 180, 30)
+            else:
+                box = sphgeom.Box.fromDegrees(20, -40, 40, -20)
             rs = healpix_pixelization.envelope(box)
             pixels = []
             for (begin, end) in rs:
@@ -161,6 +164,9 @@ class UBandOffsetMapMaker:
             # Now we select stars that have valid slr u OR ref u.
             u_selected = np.isfinite(gaia_stars_all["ref_u_flux"]) | np.isfinite(gaia_stars_all["slr_u_flux"])
             gaia_stars_all = gaia_stars_all[u_selected]
+
+            if len(gaia_stars_all) == 0:
+                continue
 
             ipnest = hpg.angle_to_pixel(self.nside, gaia_stars_all["coord_ra"], gaia_stars_all["coord_dec"])
             h, rev = esutil.stat.histogram(ipnest, rev=True)
@@ -353,13 +359,17 @@ class UBandOffsetMapMaker:
 
         return fname
 
-    def plot_uband_offset_maps(self, hsp_file, mode="slr"):
+    def plot_uband_offset_maps(self, hsp_file, fname_base, mode="slr-xp"):
         """Plot uband offset maps (and histograms) from a map file.
 
         Parameters
         ----------
         hsp_file : `str`
             Name of healsparse file with maps.
+        fname_base : `str`
+            Filename base of output maps.
+        mode : `str`, optional
+            Offset computation mode, "slr-xp", "slr-sdss", or "direct".
         """
         offset_map = hsp.HealSparseMap.read(hsp_file)
 
@@ -376,12 +386,12 @@ class UBandOffsetMapMaker:
 
         valid_pixels, valid_ra, valid_dec = offset.valid_pixels_pos(return_pixels=True)
 
-        if mode == "slr":
+        if mode == "slr-xp":
             label = "SLR u - XP u (mmag)"
-            fname_base = "uslr-uxp"
+        elif mode == "slr-sdss":
+            label = "SLR u - SDSS u (mmag)"
         else:
             label = "XP u - SDSS u (mmag)"
-            fname_base = "uxp-usdss"
 
         # First we plot the full u-band offset map.
         plt.clf()
@@ -403,7 +413,7 @@ class UBandOffsetMapMaker:
             sp = skyproj.McBrydeSkyproj(ax=ax)
             sp.draw_hspmap(offset_map["nslr_u"], zoom=True)
             sp.draw_colorbar(label=f"# SLR Stars (nside {self.nside})")
-            fig.savefig("uslr_nstar.png")
+            fig.savefig(f"{fname_base}_nstar.png")
             plt.close(fig)
         else:
             # Plot the number of matched stars.
@@ -414,7 +424,7 @@ class UBandOffsetMapMaker:
             sp = skyproj.McBrydeSkyproj(ax=ax)
             sp.draw_hspmap(offset_map["nmatch_u"], zoom=True)
             sp.draw_colorbar(label=f"# Matched Stars (nside {self.nside})")
-            fig.savefig("umatch_xp_sdss_nstar.png")
+            fig.savefig(f"{fname_base}_nstar.png")
             plt.close(fig)
 
         # And cut low Galactic latitude regions.
