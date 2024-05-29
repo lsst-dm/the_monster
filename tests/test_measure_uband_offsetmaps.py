@@ -42,7 +42,7 @@ class DESInfoTester(DESInfo):
 
 class PS1InfoTester(PS1Info):
     PATH = os.path.join(ROOT, "data", "ps1")
-    WRITE_PATH = os.path.join(ROOT, "data", "ps1_transformed")
+    TRANSFORMED_PATH = os.path.join(ROOT, "data", "ps1_transformed")
     ORIG_NAME_FOR_TEST = "PS1"
     NAME = "TestPS1"
     COLORTERM_PATH = os.path.join(ROOT, "data", "colorterms")
@@ -69,11 +69,31 @@ class UBandOffsetMapMakerTest(lsst.utils.tests.TestCase):
             fname = measurer.measure_uband_offset_map()
             self.assertTrue(os.path.isfile(fname))
 
-            measurer.plot_uband_offset_maps(fname)
+            measurer.plot_uband_offset_maps(fname, "uslr-uxp")
 
             self.assertTrue(os.path.isfile("uslr-uxp_full_map.png"))
             self.assertTrue(os.path.isfile("uslr-uxp_highglat_map.png"))
-            self.assertTrue(os.path.isfile("uslr_nstar.png"))
+            self.assertTrue(os.path.isfile("uslr-uxp_nstar.png"))
+            # The histogram fails in the tiny test.
+
+    def test_measure_uband_offset_map_sdss(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            os.chdir(temp_dir)
+
+            measurer = UBandOffsetMapMaker(
+                gaia_reference_class=GaiaDR3InfoTester,
+                catalog_info_class_list=[PS1InfoTester, DESInfoTester],
+                uband_ref_class=SDSSInfoTester,
+                testing_mode=True,
+            )
+            fname = measurer.measure_uband_offset_map()
+            self.assertTrue(os.path.isfile(fname))
+
+            measurer.plot_uband_offset_maps(fname, "uslr-usdss", mode="slr-sdss")
+
+            self.assertTrue(os.path.isfile("uslr-usdss_full_map.png"))
+            self.assertTrue(os.path.isfile("uslr-usdss_highglat_map.png"))
+            self.assertTrue(os.path.isfile("uslr-usdss_nstar.png"))
             # The histogram fails in the tiny test.
 
     def test_measure_uband_direct_offset_map(self):
@@ -84,17 +104,16 @@ class UBandOffsetMapMakerTest(lsst.utils.tests.TestCase):
                 gaia_reference_class=GaiaDR3InfoTester,
                 catalog_info_class_list=[GaiaXPuInfoTester],
                 uband_ref_class=SDSSInfoTester,
-                # uband_slr_class=DESInfoTester,
                 testing_mode=True,
             )
             fname = measurer.measure_uband_offset_map_direct()
             self.assertTrue(os.path.isfile(fname))
 
-            measurer.plot_uband_offset_maps(fname, mode="direct")
+            measurer.plot_uband_offset_maps(fname, "uxp-usdss", mode="direct")
 
             self.assertTrue(os.path.isfile("uxp-usdss_full_map.png"))
             self.assertTrue(os.path.isfile("uxp-usdss_highglat_map.png"))
-            self.assertTrue(os.path.isfile("umatch_xp_sdss_nstar.png"))
+            self.assertTrue(os.path.isfile("uxp-usdss_nstar.png"))
             # The histogram fails in the tiny test.
 
 

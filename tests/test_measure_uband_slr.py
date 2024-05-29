@@ -27,14 +27,14 @@ class GaiaXPuInfoTester(GaiaXPuInfo):
 
 
 class DESInfoTester(DESInfo):
-    WRITE_PATH = os.path.join(ROOT, "data", "des_transformed")
+    TRANSFORMED_PATH = os.path.join(ROOT, "data", "des_transformed")
     PATH = os.path.join(ROOT, "data", "des")
     ORIG_NAME_FOR_TEST = "DES"
     NAME = "TestDES"
 
 
 class PS1InfoTester(PS1Info):
-    WRITE_PATH = os.path.join(ROOT, "data", "ps1_transformed")
+    TRANSFORMED_PATH = os.path.join(ROOT, "data", "ps1_transformed")
     PATH = os.path.join(ROOT, "data", "ps1")
     ORIG_NAME_FOR_TEST = "PS1"
     NAME = "TestPS1"
