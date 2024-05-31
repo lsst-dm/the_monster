@@ -643,6 +643,12 @@ class SDSSInfo(RefcatInfo):
     def get_sn_range(self, band):
         return (10.0, np.inf)
 
+    def get_mag_range(self, band):
+        if band == "u":
+            return (15.0, 21.5)
+        else:
+            return super().get_mag_range(band)
+
     def colorterm_file(self, band):
         if band == "u":
             # This is not transformed.
