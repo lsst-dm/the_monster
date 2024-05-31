@@ -293,19 +293,28 @@ class UBandSLRSplineMeasurer:
             # The ``mag_offset_model_flux`` is the flux that we want to target.
             mag_offset_model_flux = flux_target.copy()
 
+            selected2 = selected2 & np.isfinite(mag_offset_model_flux)
+
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 model_mag = (model_flux*units.nJy).to_value(units.ABmag)
+                target_mag = (mag_offset_model_flux*units.nJy).to_value(units.ABmag)
 
             # Magnitude nodes will cover the range of training.
             mag_node_range = [np.min(model_mag[selected2]),
                               np.max(model_mag[selected2])]
+            mag_node_range2 = [np.min(target_mag[selected2]),
+                               np.max(target_mag[selected2])]
+            if mag_node_range2[0] > mag_node_range[0]:
+                mag_node_range[0] = mag_node_range2[0]
+            if mag_node_range2[1] < mag_node_range[1]:
+                mag_node_range[1] = mag_node_range2[1]
 
             mag_nodes = np.linspace(mag_node_range[0], mag_node_range[1], self.n_mag_nodes)
 
             mag_fitter = MagSplineFitter(
-                np.array(mag_offset_model_flux[selected2]),
-                np.array(model_flux[selected2]),
+                np.asarray(mag_offset_model_flux[selected2]),
+                np.asarray(model_flux[selected2]),
                 mag_nodes,
             )
             mag_p0 = mag_fitter.estimate_p0()
