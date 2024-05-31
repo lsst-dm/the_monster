@@ -8,7 +8,7 @@ matplotlib.use("Agg")
 
 import lsst.utils  # noqa: E402
 
-from lsst.the.monster import GaiaDR3Info, GaiaXPuInfo, DESInfo, PS1Info  # noqa: E402
+from lsst.the.monster import GaiaDR3Info, GaiaXPuInfo, DESInfo, PS1Info, SDSSInfo  # noqa: E402
 from lsst.the.monster import UBandSLRSplineMeasurer  # noqa: E402
 
 
@@ -18,6 +18,12 @@ ROOT = os.path.abspath(os.path.dirname(__file__))
 class GaiaDR3InfoTester(GaiaDR3Info):
     PATH = os.path.join(ROOT, "data", "gaia_dr3")
     NAME = "TestGaiaDR3"
+
+
+class SDSSInfoTester(SDSSInfo):
+    PATH = os.path.join(ROOT, "data", "sdss")
+    NAME = "TestSDSS"
+    COLORTERM_PATH = os.path.join(ROOT, "data", "colorterms")
 
 
 class GaiaXPuInfoTester(GaiaXPuInfo):
@@ -44,7 +50,7 @@ class PS1InfoTester(PS1Info):
 class UBandSLRSplineMeasurerTester(UBandSLRSplineMeasurer):
     @property
     def ra_dec_range(self):
-        return (40.0, 60.0, -30.0, -20.0)
+        return (150, 180, 10, 30)
 
     @property
     def n_nodes(self):
@@ -66,7 +72,7 @@ class UBandSLRSplineMeasurerTest(lsst.utils.tests.TestCase):
                     PS1InfoTester,
                     DESInfoTester,
                 ],
-                uband_ref_class=GaiaXPuInfoTester,
+                uband_ref_class=SDSSInfoTester,
                 uband_slr_class=DESInfoTester,
                 testing_mode=True,
             )
@@ -76,9 +82,9 @@ class UBandSLRSplineMeasurerTest(lsst.utils.tests.TestCase):
             for yaml_file in yaml_files:
                 self.assertTrue(os.path.isfile(yaml_file))
 
-            self.assertTrue(os.path.isfile("transformed_to_TestGaiaXPu_band_g_slr.png"))
-            self.assertTrue(os.path.isfile("transformed_to_TestGaiaXPu_band_g_slr_flux_residuals.png"))
-            self.assertTrue(os.path.isfile("transformed_to_TestGaiaXPu_band_g_slr_mag_offset.png"))
+            self.assertTrue(os.path.isfile("transformed_to_TestSDSS_band_g_slr.png"))
+            self.assertTrue(os.path.isfile("transformed_to_TestSDSS_band_g_slr_flux_residuals.png"))
+            self.assertTrue(os.path.isfile("transformed_to_TestSDSS_band_g_slr_mag_offset.png"))
 
 
 class TestMemory(lsst.utils.tests.MemoryTestCase):

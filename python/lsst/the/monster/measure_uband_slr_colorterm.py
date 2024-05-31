@@ -7,7 +7,7 @@ import warnings
 
 import lsst.sphgeom as sphgeom
 
-from .refcats import GaiaDR3Info, GaiaXPInfo, GaiaXPuInfo, DESInfo, SkyMapperInfo, PS1Info, VSTInfo
+from .refcats import GaiaDR3Info, GaiaXPInfo, GaiaXPuInfo, DESInfo, SkyMapperInfo, PS1Info, VSTInfo, SDSSInfo
 from .splinecolorterms import ColortermSplineFitter, ColortermSpline, MagSplineFitter
 from .utils import read_stars
 from .refcats import RefcatInfo
@@ -153,7 +153,7 @@ class UBandSLRSplineMeasurer:
         gaia_reference_class=GaiaDR3Info,
         catalog_info_class_list=[VSTInfo, SkyMapperInfo,
                                  PS1Info, GaiaXPInfo, DESInfo],
-        uband_ref_class=GaiaXPuInfo,
+        uband_ref_class=SDSSInfo,
         uband_slr_class=DESInfo,
         do_fit_flux_offset=True,
         do_fit_mag_offsets=True,
@@ -177,7 +177,7 @@ class UBandSLRSplineMeasurer:
         -------
         ra_min, ra_max, dec_min, dec_max : `float`
         """
-        return (45.0, 55.0, -30.0, -20.0)
+        return (-10.0, 10.0, -20.0, 10.0)
 
     @property
     def n_nodes(self):
