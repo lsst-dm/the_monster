@@ -11,7 +11,7 @@ from smatch import Matcher
 
 import lsst.sphgeom as sphgeom
 
-from .refcats import GaiaDR3Info, GaiaXPuInfo, DESInfo, SkyMapperInfo, PS1Info, VSTInfo
+from .refcats import GaiaDR3Info, DESInfo, SkyMapperInfo, PS1Info, VSTInfo, SDSSInfo
 from .splinecolorterms import ColortermSpline
 from .measure_uband_slr_colorterm import read_uband_combined_catalog
 from .utils import read_stars
@@ -28,7 +28,7 @@ class UBandOffsetMapMaker:
         gaia_reference_class=GaiaDR3Info,
         catalog_info_class_list=[VSTInfo, SkyMapperInfo,
                                  PS1Info, DESInfo],
-        uband_ref_class=GaiaXPuInfo,
+        uband_ref_class=SDSSInfo,
         uband_slr_class=DESInfo,
         testing_mode=False,
         nside=32,
@@ -63,7 +63,7 @@ class UBandOffsetMapMaker:
         uband_ref_info = self.uband_ref_class()
         uband_slr_info = self.uband_slr_class()
 
-        fname = f"uband_offset_map_{uband_ref_info.name}.hsp"
+        fname = f"uband_slr_offset_map_{uband_ref_info.name}.hsp"
 
         if os.path.isfile(fname):
             if overwrite:
@@ -77,7 +77,7 @@ class UBandOffsetMapMaker:
         # Read in the SLR colorterm.
         slr_colorterm_filename = os.path.join(
             uband_slr_info._colorterm_path,
-            f"{uband_slr_info.name}_to_GaiaXP_band_u.yaml",
+            f"{uband_slr_info.name}_to_SDSS_band_u.yaml",
         )
         print("Using SLR colorterm file: ", slr_colorterm_filename)
         slr_colorterm_spline = ColortermSpline.load(slr_colorterm_filename)
