@@ -7,7 +7,7 @@ import warnings
 
 import lsst.sphgeom as sphgeom
 
-from .refcats import GaiaDR3Info, GaiaXPInfo, GaiaXPuInfo, DESInfo, SkyMapperInfo, PS1Info, VSTInfo, SDSSInfo
+from .refcats import GaiaDR3Info, GaiaXPInfo, DESInfo, SkyMapperInfo, PS1Info, VSTInfo, SDSSInfo
 from .splinecolorterms import ColortermSplineFitter, ColortermSpline, MagSplineFitter
 from .utils import read_stars
 from .refcats import RefcatInfo
