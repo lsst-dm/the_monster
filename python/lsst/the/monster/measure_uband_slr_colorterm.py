@@ -155,7 +155,7 @@ class UBandSLRSplineMeasurer:
                                  PS1Info, GaiaXPInfo, DESInfo],
         uband_ref_class=SDSSInfo,
         uband_slr_class=DESInfo,
-        do_fit_flux_offset=True,
+        do_fit_flux_offset=False,
         do_fit_mag_offsets=True,
         testing_mode=False,
         htm_level=7,
