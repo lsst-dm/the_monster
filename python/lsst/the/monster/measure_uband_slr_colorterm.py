@@ -177,7 +177,7 @@ class UBandSLRSplineMeasurer:
         -------
         ra_min, ra_max, dec_min, dec_max : `float`
         """
-        return (-10.0, 10.0, -20.0, 10.0)
+        return (20.0, 35.0, -4.0, 4.0)
 
     @property
     def n_nodes(self):
