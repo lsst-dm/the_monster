@@ -277,6 +277,15 @@ class UBandOffsetMapMaker:
             if len(gaia_stars_all) == 0:
                 continue
 
+            # Cut down to those that are in the coarse pixel.
+            use, = np.where(hpg.angle_to_pixel(
+                self.nside_coarse,
+                gaia_stars_all["coord_ra"],
+                gaia_stars_all["coord_dec"]) == pixel)
+            if use.size == 0:
+                continue
+            gaia_stars_all = gaia_stars_all[use]
+
             # Read in the comparison catalog.
             uband_stars = read_stars(cat_info.path, htm_pixel_list, allow_missing=True)
 
