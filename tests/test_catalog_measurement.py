@@ -90,6 +90,10 @@ class GaiaXPuSplineMeasurerTester(GaiaXPuSplineMeasurer):
     def n_nodes(self):
         return 5
 
+    @property
+    def ra_dec_range(self):
+        return (150, 180, 10, 30)
+
 
 class SplineMeasurerTest(lsst.utils.tests.TestCase):
     def test_measure(self):
