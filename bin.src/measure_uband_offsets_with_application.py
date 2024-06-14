@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from lsst.the.monster import UBandOffsetMapMaker, SDSSInfo, GaiaXPuInfo
+from lsst.the.monster import UBandOffsetMapMaker, GaiaXPuInfo
 
 # This is a combined map, DES++ SLR vs SDSS u.  (SDSS footprint)
 # This does not currently work, disabling.
