@@ -88,6 +88,25 @@ class RefcatInfo(ABC):
 
         return filename
 
+    def uband_offset_file(self, target_name):
+        """Get the uband SLR offset map file for the given target survey.
+
+        Parameters
+        ----------
+        target_name : `str`
+            Name of the target survey.
+
+        Returns
+        -------
+        filename : `str`
+        """
+        filename = os.path.join(
+            self._colorterm_path,
+            f"uSLR_to_{target_name}_offset_map.hsp",
+        )
+
+        return filename
+
     @property
     def name(self):
         return self._name

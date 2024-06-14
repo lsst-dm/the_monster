@@ -19,6 +19,7 @@ from .utils import read_stars
 
 __all__ = [
     "UBandOffsetMapMaker",
+    "UBandOffsetMapApplicator",
 ]
 
 
@@ -58,6 +59,7 @@ class UBandOffsetMapMaker:
         nside=32,
         nside_coarse=8,
         htm_level=7,
+        apply_offsets=False,
     ):
         self.gaia_reference_class = gaia_reference_class
         self.catalog_info_class_list = catalog_info_class_list
@@ -67,6 +69,7 @@ class UBandOffsetMapMaker:
         self.nside = nside
         self.nside_coarse = nside_coarse
         self.htm_level = 7
+        self.apply_offsets = apply_offsets
 
     def measure_uband_offset_map(self, overwrite=False):
         """Measure the SLR computed u-band offset map, and save to a
@@ -87,7 +90,12 @@ class UBandOffsetMapMaker:
         uband_ref_info = self.uband_ref_class()
         uband_slr_info = self.uband_slr_class()
 
-        fname = f"uband_slr_offset_map_{uband_ref_info.name}.hsp"
+        if not self.apply_offsets:
+            fname = f"uband_slr_offset_map_{uband_ref_info.name}.hsp"
+        else:
+            offset_file = uband_slr_info.uband_offset_file(uband_ref_info.name)
+            offset_applicator = UBandOffsetMapApplicator(offset_file)
+            fname = f"uband_slr_offset_map_{uband_ref_info.name}_postapply.hsp"
 
         if os.path.isfile(fname):
             if overwrite:
@@ -191,6 +199,15 @@ class UBandOffsetMapMaker:
 
             if len(gaia_stars_all) == 0:
                 continue
+
+            # Apply the offset map if desired.
+            if self.apply_offsets:
+                offsets = offset_applicator.compute_offsets(
+                    gaia_stars_all["coord_ra"],
+                    gaia_stars_all["coord_dec"],
+                )
+                gaia_stars_all["slr_u_flux"] *= offsets
+                gaia_stars_all["slr_u_fluxErr"] *= offsets
 
             ipnest = hpg.angle_to_pixel(self.nside, gaia_stars_all["coord_ra"], gaia_stars_all["coord_dec"])
             h, rev = esutil.stat.histogram(ipnest, rev=True)
@@ -404,6 +421,11 @@ class UBandOffsetMapMaker:
         mode : `str`, optional
             Offset computation mode, "slr-xp", "slr-sdss", or "direct".
         """
+        if self.apply_offsets:
+            _fname_base = fname_base + "_with_applied_offsets"
+        else:
+            _fname_base = fname_base
+
         offset_map = hsp.HealSparseMap.read(hsp_file)
 
         def gauss(x, *p):
@@ -434,7 +456,7 @@ class UBandOffsetMapMaker:
         sp = skyproj.McBrydeSkyproj(ax=ax)
         sp.draw_hspmap(offset*1000., zoom=True)
         sp.draw_colorbar(label=label)
-        fig.savefig(f"{fname_base}_full_map.png")
+        fig.savefig(f"{_fname_base}_full_map.png")
         plt.close(fig)
 
         if mode == "slr":
@@ -446,7 +468,7 @@ class UBandOffsetMapMaker:
             sp = skyproj.McBrydeSkyproj(ax=ax)
             sp.draw_hspmap(offset_map["nslr_u"], zoom=True)
             sp.draw_colorbar(label=f"# SLR Stars (nside {self.nside})")
-            fig.savefig(f"{fname_base}_nstar.png")
+            fig.savefig(f"{_fname_base}_nstar.png")
             plt.close(fig)
         else:
             # Plot the number of matched stars.
@@ -457,7 +479,7 @@ class UBandOffsetMapMaker:
             sp = skyproj.McBrydeSkyproj(ax=ax)
             sp.draw_hspmap(offset_map["nmatch_u"], zoom=True)
             sp.draw_colorbar(label=f"# Matched Stars (nside {self.nside})")
-            fig.savefig(f"{fname_base}_nstar.png")
+            fig.savefig(f"{_fname_base}_nstar.png")
             plt.close(fig)
 
         # And cut low Galactic latitude regions.
@@ -474,7 +496,7 @@ class UBandOffsetMapMaker:
         sp = skyproj.McBrydeSkyproj(ax=ax)
         sp.draw_hspmap(offset*1000., zoom=True)
         sp.draw_colorbar(label=label)
-        fig.savefig(f"{fname_base}_highglat_map.png")
+        fig.savefig(f"{_fname_base}_highglat_map.png")
         plt.close(fig)
 
         # Fit a Gaussian to the high galactic latitude.
@@ -525,4 +547,50 @@ class UBandOffsetMapMaker:
             va="top",
         )
 
-        plt.savefig(f"{fname_base}_highglat_hist.png")
+        plt.savefig(f"{_fname_base}_highglat_hist.png")
+
+
+class UBandOffsetMapApplicator:
+    """Class to apply a u-band offset map with interpolation.
+
+    Parameters
+    ----------
+    filename : `str`
+        Name of file holding the offset map.
+    min_match : `int`, optional
+        Minimum number of matches to trust the offset in this pixel.
+    """
+    def __init__(self, filename, min_match=3):
+        offset_map = hsp.HealSparseMap.read(filename)
+
+        nmatch = offset_map["nmatch_u"].copy()
+        self.offset = offset_map["offset_u"].copy()
+
+        # Only use pixels where we have min_match calibration stars.
+        valid_pixels = nmatch.valid_pixels
+        bad, = np.where(nmatch[valid_pixels] < min_match)
+        self.offset[valid_pixels[bad]] = None
+
+    def compute_offsets(self, ra_array, dec_array):
+        """Compute the flux multiplier to apply to a set of ra/dec.
+
+        Parameters
+        ----------
+        ra_array : `np.ndarray`
+            Array of RA values.
+        dec_array : `np.ndarray`
+            Array of Dec values.
+
+        Returns
+        -------
+        flux_multiplier : `np.ndarray`
+            Flux multiplier to remove the offset.
+        """
+        offsets = self.offset.interpolate_pos(ra_array, dec_array, allow_partial=True)
+
+        # Don't apply an offset if we don't have one to apply.
+        # Live with the fact that these problematic regions will remain
+        # problematic.
+        offsets[offsets == hpg.UNSEEN] = 0.0
+
+        return 10.**(offsets/2.5)
