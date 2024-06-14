@@ -23,6 +23,30 @@ __all__ = [
 
 
 class UBandOffsetMapMaker:
+    """Class for making u-band offset maps.
+
+    Parameters
+    ----------
+    gaia_reference_class : `RefcatInfo`, optional
+        The input Gaia DR3 RefcatInfo class.
+    catalog_info_class_list : `list` [`RefcatInfo`], optional
+        List of RefcatInfo classes to combine for SLR.
+    uband_ref_class : `RefcatInfo`, optional
+        The class for the reference u-band flux.
+    uband_slr_class : `RefcatInfo`, optional
+        The class for the SLR u-band flux.
+    testing_mode : `bool`, optional
+        Run in testing mode (restricted area)?
+    nside : `int`, optional
+        Healpix nside to make offset map.
+    nside_coarse : `int`, optional
+        Healpix nside to read in input maps.
+    htm_level : `int`, optional
+        HTM index level for reference catalogs.
+    apply_offsets : `bool`, optional
+        Apply pre-existing offsets?  Used for closed-loop
+        testing.
+    """
     def __init__(
         self,
         gaia_reference_class=GaiaDR3Info,
