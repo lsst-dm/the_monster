@@ -94,6 +94,7 @@ class UBandOffsetMapMaker:
             fname = f"uband_slr_offset_map_{uband_ref_info.name}.hsp"
         else:
             offset_file = uband_slr_info.uband_offset_file(uband_ref_info.name)
+            print("Applying offsets from ", offset_file)
             offset_applicator = UBandOffsetMapApplicator(offset_file)
             fname = f"uband_slr_offset_map_{uband_ref_info.name}_postapply.hsp"
 
