@@ -116,6 +116,28 @@ class UBandOffsetMapMakerTest(lsst.utils.tests.TestCase):
             self.assertTrue(os.path.isfile("uxp-usdss_nstar.png"))
             # The histogram fails in the tiny test.
 
+    def test_measure_uband_offset_map_apply_offsets(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            os.chdir(temp_dir)
+
+            measurer = UBandOffsetMapMaker(
+                gaia_reference_class=GaiaDR3InfoTester,
+                catalog_info_class_list=[PS1InfoTester, DESInfoTester],
+                uband_ref_class=GaiaXPuInfoTester,
+                uband_slr_class=DESInfoTester,
+                testing_mode=True,
+                apply_offsets=True,
+            )
+            fname = measurer.measure_uband_offset_map()
+            self.assertTrue(os.path.isfile(fname))
+
+            measurer.plot_uband_offset_maps(fname, "uslr-uxp")
+
+            self.assertTrue(os.path.isfile("uslr-uxp_with_applied_offsets_full_map.png"))
+            self.assertTrue(os.path.isfile("uslr-uxp_with_applied_offsets_highglat_map.png"))
+            self.assertTrue(os.path.isfile("uslr-uxp_with_applied_offsets_nstar.png"))
+            # The histogram fails in the tiny test.
+
 
 class TestMemory(lsst.utils.tests.MemoryTestCase):
     pass
