@@ -5,7 +5,10 @@ from lsst.the.monster import UBandOffsetMapMaker, GaiaXPuInfo
 # This is a combined map, DES++ SLR vs SDSS u.  (SDSS footprint)
 # This does not currently work, disabling.
 """
-measurer_sdss = UBandOffsetMapMaker(uband_ref_class=SDSSInfo, apply_offsets=True)
+measurer_sdss = UBandOffsetMapMaker(
+    uband_ref_class=SDSSInfo,
+    apply_offsets=True,
+)
 fname = measurer_sdss.measure_uband_offset_map()
 measurer_sdss.plot_uband_offset_maps(fname, "uslr-usdss")
 """
