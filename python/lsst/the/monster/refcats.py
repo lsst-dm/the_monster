@@ -102,6 +102,7 @@ class RefcatInfo(ABC):
         """
         filename = os.path.join(
             self._colorterm_path,
+            "offsets",
             f"uSLR_to_{target_name}_offset_map.hsp",
         )
 
@@ -626,6 +627,7 @@ class SynthLSSTInfo(RefcatInfo):
 
 class GaiaXPuInfo(GaiaXPInfo):
     FLAG = 64
+    NAME = "GaiaXPu"
 
     def get_flux_field(self, band):
         return f"Sdss_flux_{band}_flux"
