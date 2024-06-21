@@ -88,6 +88,26 @@ class RefcatInfo(ABC):
 
         return filename
 
+    def uband_offset_file(self, target_name):
+        """Get the uband SLR offset map file for the given target survey.
+
+        Parameters
+        ----------
+        target_name : `str`
+            Name of the target survey.
+
+        Returns
+        -------
+        filename : `str`
+        """
+        filename = os.path.join(
+            self._colorterm_path,
+            "offsets",
+            f"uSLR_to_{target_name}_offset_map.hsp",
+        )
+
+        return filename
+
     @property
     def name(self):
         return self._name
@@ -417,7 +437,7 @@ class DESInfo(RefcatInfo):
 
     def get_gmr_color_range(self):
         # This is used for u-band SLR calibrations.
-        return (0.4, 0.7)
+        return (0.23, 0.7)
 
     def get_mag_range(self, band):
         if band == "g":
@@ -607,6 +627,7 @@ class SynthLSSTInfo(RefcatInfo):
 
 class GaiaXPuInfo(GaiaXPInfo):
     FLAG = 64
+    NAME = "GaiaXPu"
 
     def get_flux_field(self, band):
         return f"Sdss_flux_{band}_flux"
@@ -642,6 +663,24 @@ class SDSSInfo(RefcatInfo):
 
     def get_sn_range(self, band):
         return (10.0, np.inf)
+
+    def get_mag_range(self, band):
+        if band == "u":
+            return (15.0, 21.5)
+        else:
+            return super().get_mag_range(band)
+
+    def colorterm_file(self, band):
+        if band == "u":
+            # This is not transformed.
+            filename = os.path.join(
+                self._colorterm_path,
+                f"{self.name}_to_SDSS_band_{band}.yaml",
+            )
+        else:
+            filename = super().colorterm_file(band)
+
+        return filename
 
 
 class LATISSInfo(RefcatInfo):

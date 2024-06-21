@@ -430,4 +430,4 @@ class GaiaXPuSplineMeasurer(SplineMeasurer):
 
     @property
     def ra_dec_range(self):
-        return (150, 180, 10, 30)
+        return (20.0, 35.0, -4.0, 4.0)

@@ -7,7 +7,7 @@ import warnings
 
 import lsst.sphgeom as sphgeom
 
-from .refcats import GaiaDR3Info, GaiaXPInfo, GaiaXPuInfo, DESInfo, SkyMapperInfo, PS1Info, VSTInfo
+from .refcats import GaiaDR3Info, GaiaXPInfo, DESInfo, SkyMapperInfo, PS1Info, VSTInfo, SDSSInfo
 from .splinecolorterms import ColortermSplineFitter, ColortermSpline, MagSplineFitter
 from .utils import read_stars
 from .refcats import RefcatInfo
@@ -63,6 +63,11 @@ def read_uband_combined_catalog(
     """
     u_slr_bands = uband_ref_info.get_color_bands("u")
 
+    # Read these in first, to "fail" fast.
+    uband_ref_stars = read_stars(uband_ref_info.path, htm_pixel_list, allow_missing=True)
+    if len(uband_ref_stars) == 0:
+        return []
+
     gaia_stars_all = read_stars(gaia_ref_info.path, htm_pixel_list, allow_missing=testing_mode)
 
     if len(gaia_stars_all) == 0:
@@ -106,13 +111,7 @@ def read_uband_combined_catalog(
             gaia_stars_all[f"{band}_flux"][a] = cat_stars_selected[cat_flux_field][b]
             gaia_stars_all[f"{band}_fluxErr"][a] = cat_stars_selected[cat_flux_field + "Err"][b]
 
-    # And read in the reference catalog, transform, and fill in.
-    uband_ref_stars = read_stars(uband_ref_info.path, htm_pixel_list, allow_missing=True)
-    if len(uband_ref_stars) == 0:
-        # This would be surprising.
-        print(f"No uband ref stars found for pixels {htm_pixel_list}!")
-        return gaia_stars_all
-
+    # Work with the reference stars.
     ref_colorterm_spline = ColortermSpline.load(uband_ref_info.colorterm_file("u"))
 
     band_1, band_2 = uband_ref_info.get_color_bands("u")
@@ -154,9 +153,9 @@ class UBandSLRSplineMeasurer:
         gaia_reference_class=GaiaDR3Info,
         catalog_info_class_list=[VSTInfo, SkyMapperInfo,
                                  PS1Info, GaiaXPInfo, DESInfo],
-        uband_ref_class=GaiaXPuInfo,
+        uband_ref_class=SDSSInfo,
         uband_slr_class=DESInfo,
-        do_fit_flux_offset=True,
+        do_fit_flux_offset=False,
         do_fit_mag_offsets=True,
         testing_mode=False,
         htm_level=7,
@@ -178,7 +177,7 @@ class UBandSLRSplineMeasurer:
         -------
         ra_min, ra_max, dec_min, dec_max : `float`
         """
-        return (45.0, 55.0, -30.0, -20.0)
+        return (20.0, 35.0, -4.0, 4.0)
 
     @property
     def n_nodes(self):
@@ -294,19 +293,28 @@ class UBandSLRSplineMeasurer:
             # The ``mag_offset_model_flux`` is the flux that we want to target.
             mag_offset_model_flux = flux_target.copy()
 
+            selected2 = selected2 & np.isfinite(mag_offset_model_flux)
+
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 model_mag = (model_flux*units.nJy).to_value(units.ABmag)
+                target_mag = (mag_offset_model_flux*units.nJy).to_value(units.ABmag)
 
             # Magnitude nodes will cover the range of training.
             mag_node_range = [np.min(model_mag[selected2]),
                               np.max(model_mag[selected2])]
+            mag_node_range2 = [np.min(target_mag[selected2]),
+                               np.max(target_mag[selected2])]
+            if mag_node_range2[0] > mag_node_range[0]:
+                mag_node_range[0] = mag_node_range2[0]
+            if mag_node_range2[1] < mag_node_range[1]:
+                mag_node_range[1] = mag_node_range2[1]
 
             mag_nodes = np.linspace(mag_node_range[0], mag_node_range[1], self.n_mag_nodes)
 
             mag_fitter = MagSplineFitter(
-                np.array(mag_offset_model_flux[selected2]),
-                np.array(model_flux[selected2]),
+                np.asarray(mag_offset_model_flux[selected2]),
+                np.asarray(model_flux[selected2]),
                 mag_nodes,
             )
             mag_p0 = mag_fitter.estimate_p0()
