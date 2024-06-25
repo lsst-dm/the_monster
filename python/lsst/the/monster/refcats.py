@@ -693,6 +693,10 @@ class SDSSInfo(RefcatInfo):
         return filename
 
 
+class SDSSuInfo(SDSSInfo):
+    bands = ["u"]
+
+
 class LATISSInfo(RefcatInfo):
     NAME = "LATISS"
     FLAG = 256
