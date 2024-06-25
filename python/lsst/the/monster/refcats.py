@@ -628,6 +628,7 @@ class SynthLSSTInfo(RefcatInfo):
 class GaiaXPuInfo(GaiaXPInfo):
     FLAG = 64
     NAME = "GaiaXPu"
+    bands=["u"]
 
     def get_flux_field(self, band):
         return f"Sdss_flux_{band}_flux"
@@ -681,6 +682,10 @@ class SDSSInfo(RefcatInfo):
             filename = super().colorterm_file(band)
 
         return filename
+
+
+class SDSSuInfo(SDSSInfo):
+    bands = ["u"]
 
 
 class LATISSInfo(RefcatInfo):
