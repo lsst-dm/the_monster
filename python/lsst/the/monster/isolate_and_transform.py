@@ -4,7 +4,7 @@ import numpy as np
 
 from lsst.pipe.tasks.isolatedStarAssociation import IsolatedStarAssociationTask
 from .splinecolorterms import ColortermSpline
-from .refcats import GaiaXPInfo, GaiaDR3Info, SkyMapperInfo, PS1Info, VSTInfo, DESInfo
+from .refcats import GaiaXPInfo, GaiaDR3Info, SkyMapperInfo, PS1Info, VSTInfo, DESInfo, GaiaXPuInfo
 from .utils import read_stars, makeRefSchema, makeRefCat
 
 __all__ = ["MatchAndTransform"]
@@ -42,7 +42,8 @@ class MatchAndTransform:
     def __init__(self,
                  gaia_reference_class=GaiaDR3Info,
                  catalog_info_class_list=[GaiaXPInfo, SkyMapperInfo,
-                                          PS1Info, VSTInfo, DESInfo],
+                                          PS1Info, VSTInfo, DESInfo,
+                                          GaiaXPuInfo],
                  transformed_path_inp=None,
                  testing_mode=False,
                  ):
@@ -81,10 +82,10 @@ class MatchAndTransform:
             # cat_info = self.CatInfoClass() e.g. gaia cat
 
             # output columns are target catalog id, gaia id, coordinates,
-            # and the des fluxes
+            # and the des (or sdss for u-band) fluxes
             outcols = ["id", self.gaia_reference_info.name + "_id", "coord_ra", "coord_dec"]
-            outcols += [f"decam_{band}_from_{cat_info.name}_flux" for band in cat_info.bands]
-            outcols += [f"decam_{band}_from_{cat_info.name}_fluxErr" for band in cat_info.bands]
+            outcols += [cat_info.get_transformed_flux_field(band) for band in cat_info.bands]
+            outcols += [cat_info.get_transformed_flux_field(band) + "Err" for band in cat_info.bands]
 
             # read in star cat (if it exists)
             if os.path.isfile(cat_info.path+'/'+str(htmid)+'.fits'):
@@ -111,7 +112,7 @@ class MatchAndTransform:
                     # apply colorterms to transform to des mag
                     band_1, band_2 = cat_info.get_color_bands(band)
                     orig_flux = cat_stars[cat_info.get_flux_field(band)]
-                    orig_flux_err = cat_stars[cat_info.get_flux_field(band)+'Err']
+                    orig_flux_err = cat_stars[cat_info.get_flux_field(band) + 'Err']
                     model_flux = colorterm_spline.apply(
                         cat_stars[cat_info.get_flux_field(band_1)],
                         cat_stars[cat_info.get_flux_field(band_2)],
@@ -123,21 +124,21 @@ class MatchAndTransform:
 
                     # Append the modeled flux columns to cat_stars
                     cat_stars.add_column(model_flux,
-                                         name=f"decam_{band}_from_{cat_info.name}_flux")
+                                         name=cat_info.get_transformed_flux_field(band))
                     cat_stars.add_column(model_flux_err,
-                                         name=f"decam_{band}_from_{cat_info.name}_fluxErr")
+                                         name=cat_info.get_transformed_flux_field(band) + 'Err')
 
                     # Apply selection to ensure that only useful stars have
                     # transformations.
                     selected = cat_info.select_stars(cat_stars, band)
-                    cat_stars[f"decam_{band}_from_{cat_info.name}_flux"][~selected] = np.nan
-                    cat_stars[f"decam_{band}_from_{cat_info.name}_fluxErr"][~selected] = np.nan
+                    cat_stars[cat_info.get_transformed_flux_field(band)][~selected] = np.nan
+                    cat_stars[cat_info.get_transformed_flux_field(band) + 'Err'][~selected] = np.nan
 
                 # If any stars are nans in all transformed filters, they should
                 # be removed.
                 n_measurements = np.zeros(len(cat_stars))
                 for band in cat_info.bands:
-                    n_measurements[np.isfinite(cat_stars[f"decam_{band}_from_{cat_info.name}_flux"])] += 1
+                    n_measurements[np.isfinite(cat_stars[cat_info.get_transformed_flux_field(band)])] += 1
                 cat_stars = cat_stars[n_measurements > 0]
 
                 if self.transformed_path_inp is None:
@@ -150,10 +151,10 @@ class MatchAndTransform:
                 output_file = os.path.join(transformed_path, f"{htmid}.fits")
 
                 # Convert the refcat to a SimpleCatalog
-                refSchema = makeRefSchema(cat_info.name, cat_info.bands,
+                refSchema = makeRefSchema(cat_info,
                                           self.gaia_reference_info.name)
                 refCat = makeRefCat(refSchema, cat_stars[outcols],
-                                    cat_info.name, cat_info.bands,
+                                    cat_info,
                                     self.gaia_reference_info.name)
 
                 # Save the shard to FITS.

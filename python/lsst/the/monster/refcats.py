@@ -628,6 +628,8 @@ class SynthLSSTInfo(RefcatInfo):
 class GaiaXPuInfo(GaiaXPInfo):
     FLAG = 64
     NAME = "GaiaXPu"
+    bands = ["u"]
+    TRANSFORMED_PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/gaia_xp_u_20240116_transformed"
 
     def get_flux_field(self, band):
         return f"Sdss_flux_{band}_flux"
@@ -646,6 +648,14 @@ class GaiaXPuInfo(GaiaXPInfo):
         )
 
         return filename
+
+    def get_transformed_flux_field(self, band):
+        """for u band internal bandpass is sdss
+        """
+        if band != "u":
+            raise NotImplementedError(f"{self.NAME} should only be used with u-band, not band={band}")
+
+        return f"sdss_{band}_from_{self.NAME}_flux"
 
 
 class SDSSInfo(RefcatInfo):
