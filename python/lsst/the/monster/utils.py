@@ -59,16 +59,15 @@ def read_stars(path, indices, allow_missing=False):
     return stars
 
 
-def makeRefSchema(survey, bands, reference_name):
+def makeRefSchema(cat_info, reference_name):
     """
     Make the refcat schema
 
     Parameters
     ----------
-    survey : `str`
-        Name of the survey whose refcat we are writing
-    bands : `List` of `str`
-        Names of the bands in the refcat
+    cat_info : `RefcatInfo`
+        Reference catalog information for the
+        refcat we are writing
     reference_name : `str`
         Name of the overall reference catalog
 
@@ -80,20 +79,31 @@ def makeRefSchema(survey, bands, reference_name):
     refSchema = afwTable.SimpleTable.makeMinimalSchema()
     refSchema.addField(reference_name+'_id', type='L', doc='Gaia DR3 ID')
 
-    for band in bands:
-        colname = 'decam_'+band+'_from_'+survey+'_flux'
-        colname_err = colname+'Err'
+    for band in cat_info.bands:
+        # use cat info class to get transformed flux field name
+        colname = cat_info.get_transformed_flux_field(band)
+        colname_err = colname + 'Err'
+
+        # check which internal bandpass is used
+        # this should be decam for everything except for u band
+        if 'decam_' in colname:
+            target_system = 'DECam'
+        elif 'sdss_' in colname:
+            target_system = 'SDSS'
+        else:
+            raise ValueError(f"Unknown target system for band {band}")
+
         refSchema.addField(colname, type='D',
-                           doc='flux transformed to DECam system',
+                           doc=f'flux transformed to {target_system} system',
                            units='nJy')
         refSchema.addField(colname_err, type='D',
-                           doc='error on flux transformed to DECam system',
+                           doc=f'error on flux transformed to {target_system} system',
                            units='nJy')
 
     return refSchema
 
 
-def makeRefCat(refSchema, refTable, survey, bands, reference_name):
+def makeRefCat(refSchema, refTable, cat_info, reference_name):
     """
     Make the standard star catalog for persistence
 
@@ -103,10 +113,9 @@ def makeRefCat(refSchema, refTable, survey, bands, reference_name):
        Standard star catalog schema
     refTable: `Astropy Table`
        Reference catalog to convert
-    survey : `str`
-        Name of the survey whose refcat we are writing
-    bands : `List` of `str`
-        Names of the bands in the refcat
+    cat_info : `RefcatInfo`
+        Reference catalog information for the
+        refcat we are writing
     reference_name : `str`
         Name of the overall reference catalog
 
@@ -124,9 +133,9 @@ def makeRefCat(refSchema, refTable, survey, bands, reference_name):
     refCat['coord_ra'][:] = np.deg2rad(refTable['coord_ra'])
     refCat['coord_dec'][:] = np.deg2rad(refTable['coord_dec'])
 
-    for band in bands:
-        colname = 'decam_'+band+'_from_'+survey+'_flux'
-        colname_err = colname+'Err'
+    for band in cat_info.bands:
+        colname = cat_info.get_transformed_flux_field(band)
+        colname_err = colname + 'Err'
         refCat[colname][:] = refTable[colname]
         refCat[colname_err][:] = refTable[colname_err]
 
