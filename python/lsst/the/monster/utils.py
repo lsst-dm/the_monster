@@ -142,7 +142,7 @@ def makeRefCat(refSchema, refTable, cat_info, reference_name):
     return refCat
 
 
-def makeMonsterSchema(gaia_catalog_columns, bands, output_system='lsst'):
+def makeMonsterSchema(gaia_catalog_columns, target_systems):
     """
     Make the monster refcat schema. Include all columns from Gaia, as well
     as transformed fluxes, flux errors, and flags identifying the source
@@ -154,7 +154,7 @@ def makeMonsterSchema(gaia_catalog_columns, bands, output_system='lsst'):
         Gaia catalog columns (e.g., from "gaia_stars_all.itercols()")
     bands : `List` of `str`
         Names of the bands to include in the monster refcat
-    output_system : `str`
+    target_system : `str`
         Name of the output system to use.
 
     Returns
@@ -173,10 +173,10 @@ def makeMonsterSchema(gaia_catalog_columns, bands, output_system='lsst'):
     # units in the input table, so we'll treat them separately to add the
     # units. Thus we exclude them from the "transfer" loop as well.
     exclude_columns = ["id", "coord_ra", "coord_dec"]
-    for band in bands:
-        exclude_columns.append(f"monster_{output_system}_{band}_flux")
-        exclude_columns.append(f"monster_{output_system}_{band}_fluxErr")
-        exclude_columns.append(f"monster_{output_system}_{band}_source_flag")
+    for target_system,band in target_systems:
+        exclude_columns.append(f"monster_{target_system}_{band}_flux")
+        exclude_columns.append(f"monster_{target_system}_{band}_fluxErr")
+        exclude_columns.append(f"monster_{target_system}_{band}_source_flag")
 
     fieldtype_dict = {'float32': 'F', 'float64': 'D',
                       'int64': 'L', 'bool': 'B'}
@@ -201,10 +201,10 @@ def makeMonsterSchema(gaia_catalog_columns, bands, output_system='lsst'):
                                        )
 
     # Add columns to the schema for the flux, flux error, and flags.
-    for band in bands:
-        fluxcolname = f"monster_{output_system}_{band}_flux"
+    for target_system,band in target_systems:
+        fluxcolname = f"monster_{target_system}_{band}_flux"
         fluxcolname_err = fluxcolname+'Err'
-        flagcolname = f"monster_{output_system}_{band}_source_flag"
+        flagcolname = f"monster_{target_system}_{band}_source_flag"
         monsterSchema.addField(fluxcolname, type='D',
                                doc='flux transformed to synthetic system',
                                units='nJy')
@@ -213,6 +213,7 @@ def makeMonsterSchema(gaia_catalog_columns, bands, output_system='lsst'):
                                units='nJy')
         monsterSchema.addField(flagcolname, type='I',
                                doc='source of flux (1:VST, 2:Skymapper, 4:PS1, 8:GaiaXP, 16:DES)',
+                               # TO DO: source of flux flags need to be updated
                                units='')
 
     return monsterSchema

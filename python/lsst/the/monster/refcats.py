@@ -19,6 +19,19 @@ __all__ = [
     "VSTInfo",
 ]
 
+FLAG_DICT = {
+    "GaiaDR3": 0,
+    "DES": 2,
+    "GaiaXP": 4,
+    "GaiaXPu": 8, # should this be 4?
+    "PS1": 16,
+    "SkyMapper": 32,
+    "VST": 128,
+    "SDSS": 256,
+    "SynthLSST": 512,
+    "LATISS": 1024,
+    "SLR": 2048,
+}
 
 class RefcatInfo(ABC):
     PATH = ""
@@ -652,7 +665,7 @@ class GaiaXPuInfo(GaiaXPInfo):
     def get_transformed_flux_field(self, band):
         """for u band internal bandpass is sdss
         """
-        if band != "u":
+        if band not in ["u"]:
             raise NotImplementedError(f"{self.NAME} should only be used with u-band, not band={band}")
 
         return f"sdss_{band}_from_{self.NAME}_flux"
