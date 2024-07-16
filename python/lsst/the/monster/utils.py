@@ -173,7 +173,7 @@ def makeMonsterSchema(gaia_catalog_columns, target_systems):
     # units in the input table, so we'll treat them separately to add the
     # units. Thus we exclude them from the "transfer" loop as well.
     exclude_columns = ["id", "coord_ra", "coord_dec"]
-    for target_system,band in target_systems:
+    for target_system, band in target_systems:
         exclude_columns.append(f"monster_{target_system}_{band}_flux")
         exclude_columns.append(f"monster_{target_system}_{band}_fluxErr")
         exclude_columns.append(f"monster_{target_system}_{band}_source_flag")
@@ -201,7 +201,7 @@ def makeMonsterSchema(gaia_catalog_columns, target_systems):
                                        )
 
     # Add columns to the schema for the flux, flux error, and flags.
-    for target_system,band in target_systems:
+    for target_system, band in target_systems:
         fluxcolname = f"monster_{target_system}_{band}_flux"
         fluxcolname_err = fluxcolname+'Err'
         flagcolname = f"monster_{target_system}_{band}_source_flag"

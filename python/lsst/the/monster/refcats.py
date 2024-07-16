@@ -23,7 +23,7 @@ FLAG_DICT = {
     "GaiaDR3": 0,
     "DES": 2,
     "GaiaXP": 4,
-    "GaiaXPu": 8, # should this be 4?
+    "GaiaXPu": 8,  # should this be 4?
     "PS1": 16,
     "SkyMapper": 32,
     "VST": 128,
@@ -32,6 +32,7 @@ FLAG_DICT = {
     "LATISS": 1024,
     "SLR": 2048,
 }
+
 
 class RefcatInfo(ABC):
     PATH = ""
