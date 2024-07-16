@@ -4,6 +4,7 @@ import numpy as np
 
 from lsst.afw.table import SimpleCatalog
 import lsst.afw.table as afwTable
+from .refcats import FLAG_DICT
 
 __all__ = ["read_stars", "makeRefSchema", "makeRefCat",
            "makeMonsterSchema", "makeMonsterCat"]
@@ -211,8 +212,10 @@ def makeMonsterSchema(gaia_catalog_columns, target_systems):
         monsterSchema.addField(fluxcolname_err, type='D',
                                doc='error on flux transformed to synthetic system',
                                units='nJy')
+
+        flag_doc = ", ".join([str(FLAG_DICT[key]) + ":" + key for key in FLAG_DICT.keys()])
         monsterSchema.addField(flagcolname, type='I',
-                               doc='source of flux (1:VST, 2:Skymapper, 4:PS1, 8:GaiaXP, 16:DES)',
+                               doc=f'source of flux ({flag_doc})',
                                # TO DO: source of flux flags need to be updated
                                units='')
 

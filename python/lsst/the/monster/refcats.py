@@ -8,6 +8,7 @@ from abc import ABC, abstractmethod
 
 
 __all__ = [
+    "FLAG_DICT",
     "DESInfo",
     "GaiaDR3Info",
     "GaiaXPInfo",
@@ -23,14 +24,13 @@ FLAG_DICT = {
     "GaiaDR3": 0,
     "DES": 2,
     "GaiaXP": 4,
-    "GaiaXPu": 8,  # should this be 4?
-    "PS1": 16,
-    "SkyMapper": 32,
-    "VST": 128,
-    "SDSS": 256,
-    "SynthLSST": 512,
-    "LATISS": 1024,
-    "SLR": 2048,
+    "PS1": 8,
+    "SkyMapper": 16,
+    "VST": 32,
+    "SDSS": 64,
+    "SLR": 128,
+    "SynthLSST": 256,
+    "LATISS": 512,
 }
 
 
@@ -384,7 +384,7 @@ class RefcatInfo(ABC):
 class GaiaDR3Info(RefcatInfo):
     PATH = "/sdf/data/rubin/shared/the_monster/GAIA_DR3/gaia_dr3"
     NAME = "GaiaDR3"
-    FLAG = 0
+    FLAG = FLAG_DICT[NAME]
 
     def get_flux_field(self, band):
         return f"phot_{band.lower()}_mean_flux"
@@ -399,7 +399,7 @@ class GaiaDR3Info(RefcatInfo):
 class GaiaXPInfo(RefcatInfo):
     PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/gaia_xp_ps_des_sdss_sm_20240116"
     NAME = "GaiaXP"
-    FLAG = 8
+    FLAG = FLAG_DICT[NAME]
     bands = ["g", "r", "i", "z", "y"]
 
     def get_flux_field(self, band):
@@ -432,7 +432,7 @@ class GaiaXPInfo(RefcatInfo):
 class DESInfo(RefcatInfo):
     PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/des_y6_calibration_stars_20230511"
     NAME = "DES"
-    FLAG = 16
+    FLAG = FLAG_DICT[NAME]
     bands = ["g", "r", "i", "z", "y"]
 
     def get_flux_field(self, band):
@@ -490,7 +490,7 @@ class DESInfo(RefcatInfo):
 class SkyMapperInfo(RefcatInfo):
     PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/sky_mapper_dr2_20221205"
     NAME = "SkyMapper"
-    FLAG = 2
+    FLAG = FLAG_DICT[NAME]
     bands = ["g", "r", "i", "z"]
 
     def get_flux_field(self, band):
@@ -531,7 +531,7 @@ class PS1Info(RefcatInfo):
     PATH = "/sdf/group/rubin/datasets/refcats/htm/v1/ps1_pv3_3pi_20170110"
     TRANSFORMED_PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/ps1_transformed"
     NAME = "PS1"
-    FLAG = 4
+    FLAG = FLAG_DICT[NAME]
     bands = ["g", "r", "i", "z", "y"]
 
     def get_flux_field(self, band):
@@ -586,7 +586,7 @@ class PS1Info(RefcatInfo):
 class VSTInfo(RefcatInfo):
     PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/vst_atlas_20221205"
     NAME = "VST"
-    FLAG = 1
+    FLAG = FLAG_DICT[NAME]
     bands = ["g", "r", "i", "z"]
 
     def get_flux_field(self, band):
@@ -625,7 +625,7 @@ class VSTInfo(RefcatInfo):
 
 class SynthLSSTInfo(RefcatInfo):
     NAME = "SynthLSST"
-    FLAG = 32
+    FLAG = FLAG_DICT[NAME]
     bands = ["u", "g", "r", "i", "z", "y"]
 
     def get_flux_field(self, band):
@@ -640,7 +640,6 @@ class SynthLSSTInfo(RefcatInfo):
 
 
 class GaiaXPuInfo(GaiaXPInfo):
-    FLAG = 64
     NAME = "GaiaXPu"
     bands = ["u"]
     TRANSFORMED_PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/gaia_xp_u_20240116_transformed"
@@ -675,7 +674,7 @@ class GaiaXPuInfo(GaiaXPInfo):
 class SDSSInfo(RefcatInfo):
     PATH = "/sdf/data/rubin/shared/the_monster/sharded_refcats/sdss_16_standards_20221205"
     NAME = "SDSS"
-    FLAG = 128
+    FLAG = FLAG_DICT[NAME]
     bands = ["u", "g", "r", "i", "z"]
 
     def get_flux_field(self, band):
@@ -713,7 +712,7 @@ class SDSSuInfo(SDSSInfo):
 
 class LATISSInfo(RefcatInfo):
     NAME = "LATISS"
-    FLAG = 256
+    FLAG = FLAG_DICT[NAME]
     bands = ["g", "r", "i", "z", "y"]
 
     def get_flux_field(self, band):
