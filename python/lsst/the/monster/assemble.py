@@ -8,6 +8,7 @@ from .refcats import (GaiaXPInfo, GaiaXPuInfo, GaiaDR3Info, SkyMapperInfo, PS1In
                       VSTInfo, DESInfo, SynthLSSTInfo, LATISSInfo, SDSSuInfo,
                       FLAG_DICT)
 from .utils import read_stars, makeMonsterSchema, makeMonsterCat
+from .measure_uband_offsetmaps import UBandOffsetMapApplicator
 
 __all__ = ["AssembleMonsterRefcat"]
 
@@ -63,6 +64,8 @@ class AssembleMonsterRefcat:
                  target_catalog_info_class_list=[SynthLSSTInfo, LATISSInfo, DESInfo, SDSSuInfo],
                  monster_path_inp=None,
                  do_u_band_slr=True,
+                 uband_ref_class=GaiaXPuInfo,
+                 uband_slr_class=DESInfo,
                  testing_mode=False,
                  ):
 
@@ -80,6 +83,9 @@ class AssembleMonsterRefcat:
 
         self.colorterm_path = os.path.join(lsst.utils.getPackageDir('the_monster'), 'colorterms')
         self.do_u_band_slr = do_u_band_slr
+        if self.do_u_band_slr:
+            self.uband_ref_info = uband_ref_class()
+            self.uband_slr_info = uband_slr_class()
 
     def run(self,
             *,
@@ -213,14 +219,15 @@ class AssembleMonsterRefcat:
                         gaia_stars_all[
                             f"monster_{target_system_name}_{band}_source_flag"
                         ][idx1] = cat_info.flag
+
         # First u band SLR and transformations to target systems
         if self.do_u_band_slr & ("u" in self.all_bands):
             # for u band slr we use DES g and r bands to
             # transform to SDSS u band
-            target_system_name = 'SDSS'
+            target_system_name = "SDSS"
             band = "u"
 
-            colorterm_file_string = 'DES_to_SDSS_band'
+            colorterm_file_string = f'DES_to_{target_system_name}_band'
             colorterm_spline = self.get_colorterm_spline(colorterm_file_string, band)
 
             # apply colorterms to transform to target system mag
@@ -237,45 +244,44 @@ class AssembleMonsterRefcat:
             )
             # Rescale flux error to keep S/N constant
             slr_model_flux_err = slr_model_flux * (orig_flux_err/orig_flux)
-
-            # only want to insert values that are not nan in SLR
-            slr_model_flux_not_nan = np.isfinite(slr_model_flux)
+            # apply offsets to pin SLR to sdss_u_from_gaiaXPu
+            slr_model_flux, slr_model_flux_err = self.apply_u_band_offsets(
+                gaia_stars_all=gaia_stars_all,
+                slr_model_flux=slr_model_flux,
+                slr_model_flux_err=slr_model_flux_err
+            )
 
             for target_system_name, band in target_systems_u_transform:
+                # we take our SDSS_u flux and transform to target system
+                colorterm_file_string = 'SDSS_to_'+str(target_system_name)+'_band'
+                colorterm_spline = self.get_colorterm_spline(colorterm_file_string, band)
                 flux_col = f"monster_{target_system_name}_{band}_flux"
-                if target_system_name == 'SDSS':
-                    # this is null transform
-                    flag = slr_model_flux_not_nan
+                # SDSS_to_SDSS_band_u source_color_field_1 = psfMag_g_flux
+                # should we change to just g? so we can use
+                # colorterm_spline.source_color_field_1 below
+                if colorterm_spline.source_color_field_1 == 'psfMag_g_flux':
+                    colorterm_spline.source_color_field_1 = 'g'
+                    colorterm_spline.source_color_field_2 = 'r'
+                flux_col_1 = f'monster_DES_{colorterm_spline.source_color_field_1}_flux'
+                flux_col_2 = f'monster_DES_{colorterm_spline.source_color_field_2}_flux'
 
-                    gaia_stars_all[flux_col][flag] = slr_model_flux[flag]
-                    gaia_stars_all[flux_col + "Err"][flag] = slr_model_flux_err[flag]
-                    # Update the flags to denote which survey the flux came
-                    gaia_stars_all[flux_col.replace('flux', 'source_flag')][flag] = FLAG_DICT["SLR"]
-                else:
-                    # we take our SDSS_u flux and transform to target system
-                    colorterm_file_string = 'SDSS_to_'+str(target_system_name)+'_band'
-                    colorterm_spline = self.get_colorterm_spline(colorterm_file_string, band)
+                orig_flux = slr_model_flux
+                orig_flux_err = slr_model_flux_err
 
-                    flux_col_1 = f'monster_DES_{colorterm_spline.source_color_field_1}_flux'
-                    flux_col_2 = f'monster_DES_{colorterm_spline.source_color_field_2}_flux'
+                model_flux = colorterm_spline.apply(
+                    gaia_stars_all[flux_col_1],
+                    gaia_stars_all[flux_col_2],
+                    orig_flux,
+                )
+                # Rescale flux error to keep S/N constant
+                model_flux_err = model_flux * (orig_flux_err/orig_flux)
+                model_flux_not_nan = np.isfinite(model_flux)
+                flag = model_flux_not_nan
 
-                    orig_flux = slr_model_flux
-                    orig_flux_err = slr_model_flux_err
-
-                    model_flux = colorterm_spline.apply(
-                        gaia_stars_all[flux_col_1],
-                        gaia_stars_all[flux_col_2],
-                        orig_flux,
-                    )
-                    # Rescale flux error to keep S/N constant
-                    model_flux_err = model_flux * (orig_flux_err/orig_flux)
-                    model_flux_not_nan = np.isfinite(model_flux)
-                    flag = model_flux_not_nan
-
-                    gaia_stars_all[flux_col][flag] = model_flux[flag]
-                    gaia_stars_all[flux_col + "Err"][flag] = model_flux_err[flag]
-                    # Update the flags to denote which survey the flux came
-                    gaia_stars_all[flux_col.replace('flux', 'source_flag')][flag] = FLAG_DICT["SLR"]
+                gaia_stars_all[flux_col][flag] = model_flux[flag]
+                gaia_stars_all[flux_col + "Err"][flag] = model_flux_err[flag]
+                # Update the flags to denote which survey the flux came
+                gaia_stars_all[flux_col.replace('flux', 'source_flag')][flag] = FLAG_DICT["SLR"]
 
         # next perform non SLR u band transformations to target systems
         if len(target_systems_u_transform) > 0:
@@ -297,38 +303,36 @@ class AssembleMonsterRefcat:
                     orig_flux = cat_stars[cat_info.get_transformed_flux_field(band)]
                     orig_flux_err = cat_stars[cat_info.get_transformed_flux_field(band)+'Err']
                     # Match the transformed catalog to Gaia.
+                    # Since we need g and r from monster
                     idx1, idx2 = esutil.numpy_util.match(gaia_stars_all['id'],
                                                          cat_stars['GaiaDR3_id'])
-                    if target_system_name == 'SDSS':
-                        # null transform no color terms in xpu catalog
-                        model_flux = orig_flux[idx2]
-                        model_flux_err = orig_flux_err[idx2]
-                    else:
-                        # we match with monster to get g and r
-                        # and use u band from cat_info
-                        colorterm_file_string = 'SDSS_to_'+str(target_system_name)+'_band'
-                        colorterm_spline = self.get_colorterm_spline(colorterm_file_string, band)
+                    # we match with monster to get g and r
+                    # and use u band from cat_info
+                    colorterm_file_string = 'SDSS_to_'+str(target_system_name)+'_band'
+                    colorterm_spline = self.get_colorterm_spline(colorterm_file_string, band)
+                    if colorterm_spline.source_color_field_1 == 'psfMag_g_flux':
+                        colorterm_spline.source_color_field_1 = 'g'
+                        colorterm_spline.source_color_field_2 = 'r'
+                    # apply colorterms to transform to target system mag
 
-                        # apply colorterms to transform to target system mag
+                    flux_col_1 = f'monster_DES_{colorterm_spline.source_color_field_1}_flux'
+                    flux_col_2 = f'monster_DES_{colorterm_spline.source_color_field_2}_flux'
+                    model_flux = colorterm_spline.apply(
+                        gaia_stars_all[flux_col_1][idx1],
+                        gaia_stars_all[flux_col_2][idx1],
+                        orig_flux[idx2],
+                    )
+                    # Rescale flux error to keep S/N constant
+                    model_flux_err = model_flux * (orig_flux_err[idx2]/orig_flux[idx2])
 
-                        flux_col_1 = f'monster_DES_{colorterm_spline.source_color_field_1}_flux'
-                        flux_col_2 = f'monster_DES_{colorterm_spline.source_color_field_2}_flux'
-                        model_flux = colorterm_spline.apply(
-                            gaia_stars_all[flux_col_1][idx1],
-                            gaia_stars_all[flux_col_2][idx1],
-                            orig_flux[idx2],
-                        )
-                        # Rescale flux error to keep S/N constant
-                        model_flux_err = model_flux * (orig_flux_err[idx2]/orig_flux[idx2])
+                    model_flux_not_nan = np.isfinite(model_flux)
+                    flag = model_flux_not_nan  # & selected
 
-                model_flux_not_nan = np.isfinite(model_flux)
-                flag = model_flux_not_nan  # & selected
-
-                # Add the fluxes and their errors to the catalog:
-                flux_col = f"monster_{target_system_name}_{band}_flux"
-                gaia_stars_all[flux_col][idx1[flag]] = model_flux[flag]
-                gaia_stars_all[flux_col + "Err"][idx1[flag]] = model_flux_err[flag]
-                gaia_stars_all[flux_col.replace('flux', 'source_flag')][idx1[flag]] = cat_info.flag
+                    # Add the fluxes and their errors to the catalog:
+                    flux_col = f"monster_{target_system_name}_{band}_flux"
+                    gaia_stars_all[flux_col][idx1[flag]] = model_flux[flag]
+                    gaia_stars_all[flux_col + "Err"][idx1[flag]] = model_flux_err[flag]
+                    gaia_stars_all[flux_col.replace('flux', 'source_flag')][idx1[flag]] = cat_info.flag
 
         if self.monster_path_inp is None:
             monster_path = "/sdf/data/rubin/shared/the_monster/sharded_refcats/monster_v2"
@@ -361,3 +365,15 @@ class AssembleMonsterRefcat:
         colorterm_spline = ColortermSpline.load(colorterm_filename)
 
         return colorterm_spline
+
+    def apply_u_band_offsets(self, gaia_stars_all, slr_model_flux, slr_model_flux_err):
+        offset_file = self.uband_slr_info.uband_offset_file(self.uband_ref_info.name)
+        print("Applying offsets from ", offset_file)
+        offset_applicator = UBandOffsetMapApplicator(offset_file)
+        offsets = offset_applicator.compute_offsets(
+            gaia_stars_all["coord_ra"],
+            gaia_stars_all["coord_dec"],
+        )
+        slr_model_flux *= offsets
+        slr_model_flux_err *= offsets
+        return slr_model_flux, slr_model_flux_err
