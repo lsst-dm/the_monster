@@ -159,6 +159,14 @@ class AssembleMonsterRefcat:
             else:
                 continue
 
+            if self.testing_mode:
+                # We need to hack the catalogs for the test names
+                # (sorry for copying this from uband_slr_colorterm).
+                for name in cat_stars.dtype.names:
+                    if (substr := "_" + cat_info.ORIG_NAME_FOR_TEST + "_") in name:
+                        new_name = name.replace(substr, "_" + cat_info.NAME + "_")
+                        cat_stars.rename_column(name, new_name)
+
             # for each band do transformations skip u band
             for target_system_name, band in target_systems:
                 if band in bands:
@@ -299,6 +307,14 @@ class AssembleMonsterRefcat:
                 else:
                     continue
 
+                if self.testing_mode:
+                    # We need to hack the catalogs for the test names
+                    # (sorry for copying this from uband_slr_colorterm).
+                    for name in cat_stars.dtype.names:
+                        if (substr := "_" + cat_info.ORIG_NAME_FOR_TEST + "_") in name:
+                            new_name = name.replace(substr, "_" + cat_info.NAME + "_")
+                            cat_stars.rename_column(name, new_name)
+
                 for target_system_name, band in target_systems_u_transform:
                     orig_flux = cat_stars[cat_info.get_transformed_flux_field(band)]
                     orig_flux_err = cat_stars[cat_info.get_transformed_flux_field(band)+'Err']
@@ -317,6 +333,10 @@ class AssembleMonsterRefcat:
 
                     flux_col_1 = f'monster_DES_{colorterm_spline.source_color_field_1}_flux'
                     flux_col_2 = f'monster_DES_{colorterm_spline.source_color_field_2}_flux'
+                    if self.testing_mode:
+                        flux_col_1 = flux_col_1.replace("monster_DES", "monster_TestDES")
+                        flux_col_2 = flux_col_1.replace("monster_DES", "monster_TestDES")
+
                     model_flux = colorterm_spline.apply(
                         gaia_stars_all[flux_col_1][idx1],
                         gaia_stars_all[flux_col_2][idx1],
@@ -355,6 +375,12 @@ class AssembleMonsterRefcat:
             print('Transformed shard '+str(htmid))
 
     def get_colorterm_spline(self, colorterm_file_string, band):
+        if self.testing_mode:
+            # Hack the colorterm file string for the test names
+            # should I instead just change the colorterm file names?
+            # and put in testing/colorterms?
+            colorterm_file_string = colorterm_file_string.replace('Test', '')
+
         colorterm_filename = os.path.join(
             self.colorterm_path,
             colorterm_file_string+f'_{band}.yaml',
