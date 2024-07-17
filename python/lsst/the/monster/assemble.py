@@ -53,7 +53,7 @@ class AssembleMonsterRefcat:
     monster_path_inp : `str`, optional
         Output monster path, overriding the class config.
     do_u_band_slr : `bool`, optional
-        Perform u-band SLR using SDSS u and DES g & r bands
+        Perform u-band SLR using DES g & r bands to obtain SDSS u-band
     testing_mode : `bool`, optional
         Enter testing mode for read_stars?
     """
@@ -86,6 +86,29 @@ class AssembleMonsterRefcat:
         if self.do_u_band_slr:
             self.uband_ref_info = uband_ref_class()
             self.uband_slr_info = uband_slr_class()
+            self.offset_file = self.uband_slr_info.uband_offset_file(self.uband_ref_info.name)
+            self.offset_applicator = UBandOffsetMapApplicator(self.offset_file)
+        self.validate()
+
+    def validate(self):
+        output_bands = []
+        for cat_info in self.target_catalog_info_class_list:
+            output_bands += set(self.all_bands).intersection(cat_info.bands)
+        output_bands = set(output_bands)
+
+        # the u band transformations require the DES catalog to be in the
+        # monster output
+        if ("u" in output_bands) & (
+            (not any("DES" in cat_info.name for cat_info in self.target_catalog_info_class_list))
+            | ("g" not in self.all_bands)
+            | ("r" not in self.all_bands)
+        ):
+            raise ValueError(
+                "u band in output bands requires DES catalog to be in "
+                f"target_catalog_info_class_list {self.target_catalog_info_class_list}"
+                " and g and r bands to be "
+                f"in the self.all_bands list: {self.all_bands}"
+            )
 
     def run(self,
             *,
@@ -119,7 +142,7 @@ class AssembleMonsterRefcat:
             target_bands = set(self.all_bands).intersection(cat_info_target.bands)
             # create all tuples of target catalog band
             for band in target_bands:
-                if (band == "u"):
+                if band == "u":
                     # for u band we want to create monster and then
                     # use monster DES g and r band to transform to u band
                     target_systems_u_transform.append((target_system_name, band))
@@ -139,10 +162,6 @@ class AssembleMonsterRefcat:
             gaia_stars_all.add_column(int_column,
                                       name=f"monster_{target_system_name}_{band}_source_flag")
 
-        if ("u" in self.all_bands) & ((len(target_systems_u_transform) > 0) | self.do_u_band_slr) \
-                & ~("g" in self.all_bands) & ~("r" in self.all_bands):
-            raise ValueError("u band transformations or slr require g and r bands to be in the bands list")
-
         # Loop over the refcats for griz bands
         for cat_info in self.catalog_info_class_list:
             # catalog_info_class_list should be a list of
@@ -158,6 +177,14 @@ class AssembleMonsterRefcat:
                                        allow_missing=self.testing_mode)
             else:
                 continue
+
+            if self.testing_mode:
+                # We need to hack the catalogs for the test names
+                # (sorry for copying this from uband_slr_colorterm).
+                for name in cat_stars.dtype.names:
+                    if (substr := "_" + cat_info.ORIG_NAME_FOR_TEST + "_") in name:
+                        new_name = name.replace(substr, "_" + cat_info.NAME + "_")
+                        cat_stars.rename_column(name, new_name)
 
             # for each band do transformations skip u band
             for target_system_name, band in target_systems:
@@ -221,7 +248,7 @@ class AssembleMonsterRefcat:
                         ][idx1] = cat_info.flag
 
         # First u band SLR and transformations to target systems
-        if self.do_u_band_slr & ("u" in self.all_bands):
+        if self.do_u_band_slr and ("u" in self.all_bands):
             # for u band slr we use DES g and r bands to
             # transform to SDSS u band
             target_system_name = "SDSS"
@@ -234,6 +261,10 @@ class AssembleMonsterRefcat:
             flux_col = f'monster_DES_{colorterm_spline.source_field}_flux'
             flux_col_1 = f'monster_DES_{colorterm_spline.source_color_field_1}_flux'
             flux_col_2 = f'monster_DES_{colorterm_spline.source_color_field_2}_flux'
+            if self.testing_mode:
+                flux_col = flux_col.replace("monster_DES", "monster_TestDES")
+                flux_col_1 = flux_col_1.replace("monster_DES", "monster_TestDES")
+                flux_col_2 = flux_col_2.replace("monster_DES", "monster_TestDES")
 
             orig_flux = gaia_stars_all[flux_col]
             orig_flux_err = gaia_stars_all[flux_col + 'Err']
@@ -264,6 +295,10 @@ class AssembleMonsterRefcat:
                     colorterm_spline.source_color_field_2 = 'r'
                 flux_col_1 = f'monster_DES_{colorterm_spline.source_color_field_1}_flux'
                 flux_col_2 = f'monster_DES_{colorterm_spline.source_color_field_2}_flux'
+                if self.testing_mode:
+                    flux_col = flux_col.replace("monster_DES", "monster_TestDES")
+                    flux_col_1 = flux_col_1.replace("monster_DES", "monster_TestDES")
+                    flux_col_2 = flux_col_2.replace("monster_DES", "monster_TestDES")
 
                 orig_flux = slr_model_flux
                 orig_flux_err = slr_model_flux_err
@@ -298,6 +333,13 @@ class AssembleMonsterRefcat:
                                            allow_missing=self.testing_mode)
                 else:
                     continue
+                if self.testing_mode:
+                    # We need to hack the catalogs for the test names
+                    # (sorry for copying this from uband_slr_colorterm).
+                    for name in cat_stars.dtype.names:
+                        if (substr := "_" + cat_info.ORIG_NAME_FOR_TEST + "_") in name:
+                            new_name = name.replace(substr, "_" + cat_info.NAME + "_")
+                            cat_stars.rename_column(name, new_name)
 
                 for target_system_name, band in target_systems_u_transform:
                     orig_flux = cat_stars[cat_info.get_transformed_flux_field(band)]
@@ -317,6 +359,10 @@ class AssembleMonsterRefcat:
 
                     flux_col_1 = f'monster_DES_{colorterm_spline.source_color_field_1}_flux'
                     flux_col_2 = f'monster_DES_{colorterm_spline.source_color_field_2}_flux'
+                    if self.testing_mode:
+                        flux_col_1 = flux_col_1.replace("monster_DES", "monster_TestDES")
+                        flux_col_2 = flux_col_1.replace("monster_DES", "monster_TestDES")
+
                     model_flux = colorterm_spline.apply(
                         gaia_stars_all[flux_col_1][idx1],
                         gaia_stars_all[flux_col_2][idx1],
@@ -355,6 +401,33 @@ class AssembleMonsterRefcat:
             print('Transformed shard '+str(htmid))
 
     def get_colorterm_spline(self, colorterm_file_string, band):
+        """
+        Get the colorterm spline for a specific band.
+
+        This function retrieves the colorterm spline from a specified file. If
+        testing mode is enabled, it modifies the file string for testing
+        purposes.
+
+        Parameters
+        ----------
+        colorterm_file_string : `str`
+            The base string of the colorterm file name.
+        band : `str`
+            The band for which to get the colorterm spline
+            (e.g., 'g', 'r', 'i').
+
+        Returns
+        -------
+        colorterm_spline : `ColortermSpline`
+            The colorterm spline object loaded from the file.
+        """
+
+        if self.testing_mode:
+            # Hack the colorterm file string for the test names
+            # should I instead just change the colorterm file names?
+            # and put in testing/colorterms?
+            colorterm_file_string = colorterm_file_string.replace('Test', '')
+
         colorterm_filename = os.path.join(
             self.colorterm_path,
             colorterm_file_string+f'_{band}.yaml',
@@ -367,9 +440,31 @@ class AssembleMonsterRefcat:
         return colorterm_spline
 
     def apply_u_band_offsets(self, gaia_stars_all, slr_model_flux, slr_model_flux_err):
-        offset_file = self.uband_slr_info.uband_offset_file(self.uband_ref_info.name)
-        print("Applying offsets from ", offset_file)
-        offset_applicator = UBandOffsetMapApplicator(offset_file)
+        """
+        Apply u-band offsets to the model fluxes.
+
+        This function applies u-band offsets to the model fluxes using a
+        specified offset file. It modifies both the model flux and its
+        error based on the computed offsets.
+
+        Parameters
+        ----------
+        gaia_stars_all : `astropy.table.Table`
+            The table of Gaia stars containing coordinates.
+        slr_model_flux : `numpy.ndarray`
+            The array of model flux values to be adjusted.
+        slr_model_flux_err : `numpy.ndarray`
+            The array of model flux error values to be adjusted.
+
+        Returns
+        -------
+        adjusted_flux : `numpy.ndarray`
+            The model flux values after applying the offsets.
+        adjusted_flux_err : `numpy.ndarray`
+            The model flux error values after applying the offsets.
+        """
+        print("Applying offsets from ", self.offset_file)
+        offset_applicator = self.offset_applicator 
         offsets = offset_applicator.compute_offsets(
             gaia_stars_all["coord_ra"],
             gaia_stars_all["coord_dec"],
