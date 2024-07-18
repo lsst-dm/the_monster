@@ -97,7 +97,7 @@ class AssembleMonsterRefcat:
         # the u band transformations require the DES catalog to be in the
         # monster output
         if ("u" in output_bands) & (
-            (any("DES" in cat_info.name for cat_info in self.target_catalog_info_class_list))
+            (not any("DES" in cat_info.name for cat_info in self.target_catalog_info_class_list))
             | ("g" not in self.all_bands)
             | ("r" not in self.all_bands)
         ):
