@@ -10,10 +10,16 @@ import lsst.utils
 from lsst.the.monster import AssembleMonsterRefcat
 from lsst.the.monster.utils import read_stars
 from test_catalog_measurement import GaiaDR3InfoTester
-from test_measure_uband_slr import DESInfoTester
-from lsst.the.monster import GaiaXPInfo, GaiaXPuInfo, SynthLSSTInfo, SDSSuInfo  # noqa: E402
+from lsst.the.monster import DESInfo, GaiaXPInfo, GaiaXPuInfo, SynthLSSTInfo, SDSSuInfo  # noqa: E402
 
 ROOT = os.path.abspath(os.path.dirname(__file__))
+
+
+class DESInfoTester(DESInfo):
+    PATH = os.path.join(ROOT, "data", "des")
+    ORIG_NAME_FOR_TEST = "DES"
+    NAME = "TestDES"
+    COLORTERM_PATH = os.path.join(ROOT, "data", "colorterms")
 
 
 class GaiaXPInfoTester(GaiaXPInfo):
@@ -111,8 +117,10 @@ class MonsterAssembleTest(lsst.utils.tests.TestCase):
                                         monster_path_inp=temp_dir,
                                         gaia_reference_class=self.GaiaDR3CatInfoClass,
                                         target_catalog_info_class_list=self.TargetCatInfoClassList,
-                                        do_u_band_slr=False,
+                                        do_u_band_slr=True,
                                         testing_mode=True,
+                                        uband_ref_class=GaiaXPuInfoTester,
+                                        uband_slr_class=DESInfoTester,
                                         )
 
             # Run the AssembleMonsterRefcat function.
