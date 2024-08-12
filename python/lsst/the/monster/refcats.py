@@ -294,8 +294,9 @@ class RefcatInfo(ABC):
         return mag_color
 
     def get_transformed_flux_field(self, band):
-        """Get the transformed-to-DES flux field associated with a band.
-
+        """Get the transformed-to-internal reference flux field associated
+           with a band. This should be decam for grizy-bands and sdss
+           for u-band
         Parameters
         ----------
         band : `str`
@@ -306,7 +307,12 @@ class RefcatInfo(ABC):
         flux_field : `str`
             Name of flux field appropriate for this catalog.
         """
-        return f"decam_{band}_from_{self.NAME}_flux"
+        if band in "grizy":
+            return f"decam_{band}_from_{self.NAME}_flux"
+        elif band in "u":
+            return f"sdss_{band}_from_{self.NAME}_flux"
+        else:
+            raise ValueError(f"Unsupported band: {band}")
 
     def get_transformed_mag_colors(self, catalog, band):
         """Get magnitude colors appropriate for correcting a given band.
@@ -663,14 +669,6 @@ class GaiaXPuInfo(GaiaXPInfo):
         )
 
         return filename
-
-    def get_transformed_flux_field(self, band):
-        """for u band internal bandpass is sdss
-        """
-        if band not in ["u"]:
-            raise NotImplementedError(f"{self.NAME} should only be used with u-band, not band={band}")
-
-        return f"sdss_{band}_from_{self.NAME}_flux"
 
 
 class SDSSInfo(RefcatInfo):

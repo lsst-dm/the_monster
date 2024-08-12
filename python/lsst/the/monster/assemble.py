@@ -464,7 +464,7 @@ class AssembleMonsterRefcat:
             The model flux error values after applying the offsets.
         """
         print("Applying offsets from ", self.offset_file)
-        offset_applicator = self.offset_applicator 
+        offset_applicator = self.offset_applicator
         offsets = offset_applicator.compute_offsets(
             gaia_stars_all["coord_ra"],
             gaia_stars_all["coord_dec"],
