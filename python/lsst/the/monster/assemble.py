@@ -60,7 +60,7 @@ class AssembleMonsterRefcat:
     def __init__(self,
                  gaia_reference_class=GaiaDR3Info,
                  catalog_info_class_list=[VSTInfo, SkyMapperInfo,
-                                          PS1Info, GaiaXPInfo, GaiaXPuInfo, DESInfo],
+                                          PS1Info, GaiaXPInfo, SDSSuInfo, GaiaXPuInfo, DESInfo],
                  target_catalog_info_class_list=[SynthLSSTInfo, LATISSInfo, DESInfo, SDSSuInfo],
                  monster_path_inp=None,
                  do_u_band_slr=True,
@@ -319,6 +319,9 @@ class AssembleMonsterRefcat:
                 gaia_stars_all[flux_col.replace('flux', 'source_flag')][flag] = FLAG_DICT["SLR"]
 
         # next perform non SLR u band transformations to target systems
+        # by defualt this should adding GaiaXPu (priority 1) and
+        # SDSSu (priority 2) measurements to the monster,
+        # then the SLR measurements (priority 3).
         if len(target_systems_u_transform) > 0:
             for cat_info in self.catalog_info_class_list:
                 # get set of bands for each catalog
