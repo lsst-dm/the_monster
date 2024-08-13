@@ -47,7 +47,10 @@ class AssembleMonsterRefcat:
     gaia_reference_class : `RefcatInfo`
         The input Gaia DR3 RefcatInfo object.
     catalog_info_class_list : `list` [`RefcatInfo`]
-        Reverse-priority list of catalog info classes for assembly.
+        Reverse-priority list of catalog info classes for assembly of
+        grizy-bands.
+    uband_catalog_info_class_list : `list` [`RefcatInfo`]
+        Reverse-priority list of catalog info classes for assembly of u-band.
     target_catalog_info_class_list : `list` [`RefcatInfo`]
         List of catalog info classes that will be output in final monster.
     monster_path_inp : `str`, optional
@@ -60,7 +63,8 @@ class AssembleMonsterRefcat:
     def __init__(self,
                  gaia_reference_class=GaiaDR3Info,
                  catalog_info_class_list=[VSTInfo, SkyMapperInfo,
-                                          PS1Info, GaiaXPInfo, SDSSuInfo, GaiaXPuInfo, DESInfo],
+                                          PS1Info, GaiaXPInfo, DESInfo],
+                 uband_catalog_info_class_list=[SDSSuInfo, GaiaXPuInfo],
                  target_catalog_info_class_list=[SynthLSSTInfo, LATISSInfo, DESInfo, SDSSuInfo],
                  monster_path_inp=None,
                  do_u_band_slr=True,
@@ -72,6 +76,8 @@ class AssembleMonsterRefcat:
         self.gaia_reference_info = gaia_reference_class()
         self.catalog_info_class_list = [cat_info() for cat_info
                                         in catalog_info_class_list]
+        self.uband_catalog_info_class_list = [cat_info() for cat_info
+                                              in uband_catalog_info_class_list]
         self.target_catalog_info_class_list = [cat_info() for cat_info
                                                in target_catalog_info_class_list]
 
@@ -98,7 +104,7 @@ class AssembleMonsterRefcat:
 
         # the u band transformations require the DES catalog to be in the
         # monster output
-        if ("u" in output_bands) & (
+        if ("u" in output_bands) and (
             (not any("DES" in cat_info.name for cat_info in self.target_catalog_info_class_list))
             | ("g" not in self.all_bands)
             | ("r" not in self.all_bands)
@@ -162,7 +168,7 @@ class AssembleMonsterRefcat:
             gaia_stars_all.add_column(int_column,
                                       name=f"monster_{target_system_name}_{band}_source_flag")
 
-        # Loop over the refcats for griz bands
+        # Loop over the refcats for grizy bands
         for cat_info in self.catalog_info_class_list:
             # catalog_info_class_list should be a list of
             # cat_info = self.CatInfoClass() e.g. gaia cat
@@ -319,11 +325,11 @@ class AssembleMonsterRefcat:
                 gaia_stars_all[flux_col.replace('flux', 'source_flag')][flag] = FLAG_DICT["SLR"]
 
         # next perform non SLR u band transformations to target systems
-        # by defualt this should adding GaiaXPu (priority 1) and
+        # by default this should adding GaiaXPu (priority 1) and
         # SDSSu (priority 2) measurements to the monster,
-        # then the SLR measurements (priority 3).
+        # and overwriting the prevously derived SLR measurements (priority 3).
         if len(target_systems_u_transform) > 0:
-            for cat_info in self.catalog_info_class_list:
+            for cat_info in self.uband_catalog_info_class_list:
                 # get set of bands for each catalog
                 bands = set("u").intersection(cat_info.bands)
                 # if catalog does not have u-band skip
@@ -387,7 +393,6 @@ class AssembleMonsterRefcat:
             monster_path = "/sdf/data/rubin/shared/the_monster/sharded_refcats/monster_v2"
         else:
             monster_path = self.monster_path_inp
-
         # Output the finished catalog for the shard:
         os.makedirs(monster_path, exist_ok=True)
         output_file = os.path.join(monster_path, f"{htmid}.fits")

@@ -53,7 +53,8 @@ class SDSSuInfoTester(SDSSuInfo):
 class MonsterAssembleTest(lsst.utils.tests.TestCase):
     def setUp(self):
         self.GaiaDR3CatInfoClass = GaiaDR3InfoTester
-        self.RefCatInfoClassList = [GaiaXPInfoTester, GaiaXPuInfoTester]
+        self.RefCatInfoClassList = [GaiaXPInfoTester]
+        self.uBandRefCatInfoClassList = [GaiaXPuInfoTester]
         self.TargetCatInfoClassList = [SynthLSSTInfoTester, DESInfoTester, SDSSuInfoTester]
         self.synthSystem = SynthLSSTInfoTester.NAME
         self.bands = ['u', 'g', 'r', 'i', 'z', 'y']
@@ -114,6 +115,7 @@ class MonsterAssembleTest(lsst.utils.tests.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             os.chdir(temp_dir)
             amr = AssembleMonsterRefcat(catalog_info_class_list=self.RefCatInfoClassList,
+                                        uband_catalog_info_class_list=self.uBandRefCatInfoClassList,
                                         monster_path_inp=temp_dir,
                                         gaia_reference_class=self.GaiaDR3CatInfoClass,
                                         target_catalog_info_class_list=self.TargetCatInfoClassList,
