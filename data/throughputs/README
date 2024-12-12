@@ -2,6 +2,14 @@ The LSST throughputs (version 1.9) were downloaded from
 https://raw.githubusercontent.com/lsst/throughputs/main/baseline/ on
 2023-11-03.
 
+The ComCam throughputs were assembled by combining version 1.9 of
+lsst/throughputs "lens1", "lens2", "lens3", "m1", "m2", "m3", and "atmos_std"
+components with the ITL throughput average as ingested into
+`$OBS_LSST_DATA_DIR/comCam/transmission_sensor/r22_s10` (note that all sensors
+were assumed to be the same as of 2024-12-12. Then this combined throughput was
+multipled by the reference filter curves in
+https://raw.githubusercontent.com/lsst/throughputs/main/baseline/.
+
 The DES throughputs were downloaded from
 https://noirlab.edu/science/sites/default/files/media/archives/documents/scidoc1884.txt
 on 2023-11-03.
