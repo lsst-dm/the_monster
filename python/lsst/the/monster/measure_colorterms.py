@@ -1,13 +1,20 @@
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 from smatch import Matcher
 import warnings
 from astropy import units
+from astropy.table import Table
+import fitsio
+import scipy.interpolate as interpolate
+import scipy.integrate as integrate
 
 from lsst.sphgeom import Box, HtmPixelization
+from lsst.utils import getPackageDir
 
 from .splinecolorterms import ColortermSplineFitter, ColortermSpline, MagSplineFitter
 from .refcats import GaiaXPInfo, GaiaDR3Info, DESInfo, SkyMapperInfo, PS1Info, VSTInfo, SDSSInfo, GaiaXPuInfo
+from .refcats import ComCamInfo, MonsterInfo
 from .utils import read_stars
 
 
@@ -34,6 +41,8 @@ class SplineMeasurer:
     apply_target_colorterm = False
 
     testing_mode = False
+
+    custom_target_catalog_reader = None
 
     @property
     def n_nodes(self):
@@ -93,7 +102,10 @@ class SplineMeasurer:
         target_info = self.TargetCatInfoClass()
 
         # Read in all the TARGET stars in the region.
-        target_stars = read_stars(target_info.path, indices, allow_missing=self.testing_mode)
+        if self.custom_target_catalog_reader is not None:
+            target_stars = self.custom_target_catalog_reader()
+        else:
+            target_stars = read_stars(target_info.path, indices, allow_missing=self.testing_mode)
 
         # Cut to the good stars; use i-band as general reference.
         selected = target_info.select_stars(target_stars, self.target_selection_band)
@@ -431,3 +443,149 @@ class GaiaXPuSplineMeasurer(SplineMeasurer):
     @property
     def ra_dec_range(self):
         return (20.0, 35.0, -4.0, 4.0)
+
+
+class ComCamSplineMeasurer(SplineMeasurer):
+    # This measurer converts from SDSSu/DESgrizy to ComCam
+    # using a previous version of The Monster for simplicity
+    # (apologies for the circularity).  It has a custom reader
+    # because the data are under embargo.
+
+    CatInfoClass = MonsterInfo
+    TargetCatInfoClass = ComCamInfo
+
+    target_selection_band = "r"
+
+    def custom_target_catalog_reader(self):
+        """Specialized reader for calibration stars from DRP processing
+        (embargoed).
+
+        Returns
+        -------
+        catalog : `astropy.Table`
+            Astropy table catalog.
+        """
+        from lsst.daf.butler import Butler
+
+        butler = Butler(
+            "embargo",
+            instrument="LSSTComCam",
+            collections=["u/erykoff/LSSTComCam/DM-47919/highlat/build4/run4-blue"],
+        )
+
+        fgcm_stars = butler.get("fgcm_Cycle5_StandardStars")
+        md = fgcm_stars.metadata
+        fgcm_stars = fgcm_stars.asAstropy()
+
+        fgcm_stars["coord_ra"].convert_unit_to(units.degree)
+        fgcm_stars["coord_dec"].convert_unit_to(units.degree)
+
+        stars = Table(
+            data={
+                "id": fgcm_stars["id"],
+                "coord_ra": fgcm_stars["coord_ra"],
+                "coord_dec": fgcm_stars["coord_dec"],
+            },
+        )
+
+        for i, band in enumerate(md.getArray("BANDS")):
+            flux = (fgcm_stars["mag_std_noabs"][:, i]*units.ABmag).to_value(units.nJy)
+            flux[fgcm_stars["ngood"][:, i] < 2] = np.nan
+            flux_err = (np.log(10)/2.5) * np.asarray(fgcm_stars["magErr_std"][:, i]) * flux
+
+            stars[f"comcam_{band}_flux"] = flux*units.nJy
+            stars[f"comcam_{band}_fluxErr"] = flux_err*units.nJy
+
+        self.apply_c26202_calibration(stars)
+
+        return stars
+
+    def apply_c26202_calibration(self, stars):
+        """Apply C26202 absolute calibration to a catalog.
+
+        Parameters
+        ----------
+        stars : `astropy.table.Table`
+            Catalog to compute absolute calibration for.
+        """
+        c26202_ra = 15.0*(3 + 32/60. + 32.843/(60.*60.))
+        c26202_dec = -1.0*(27 + 51/60. + 48.58/(60.*60.))
+
+        with Matcher(np.asarray(stars["coord_ra"]), np.asarray(stars["coord_dec"])) as m:
+            idx, i1, i2, d = m.query_knn(
+                [c26202_ra],
+                [c26202_dec],
+                k=1,
+                distance_upper_bound=1.0/3600.,
+                return_indices=True,
+            )
+
+        if len(i1) == 0:
+            raise RuntimeError("Could not find C26202 in catalog.")
+
+        spec_file = os.path.join(
+            getPackageDir("the_monster"),
+            "data",
+            "calspec",
+            "c26202_mod_008.fits",
+        )
+        spec = fitsio.read(spec_file, ext=1, lower=True)
+
+        spec_int_func = interpolate.interp1d(
+            spec["wavelength"],
+            1.0e23*spec["flux"]*spec["wavelength"]*spec["wavelength"]*1e-10/299792458.0,
+        )
+
+        bands = self.TargetCatInfoClass().bands
+        c26202_mags = np.zeros(len(bands))
+
+        for i, band in enumerate(bands):
+            throughput_file = os.path.join(
+                getPackageDir("the_monster"),
+                "data",
+                "throughputs",
+                f"total_comcam_{band}.ecsv",
+            )
+            throughput = Table.read(throughput_file)
+
+            wavelengths = throughput["wavelength"].quantity.to_value(units.Angstrom)
+
+            f_nu = spec_int_func(wavelengths)
+            num = integrate.simpson(
+                y=f_nu*throughput["throughput"]/wavelengths,
+                x=wavelengths,
+            )
+            denom = integrate.simpson(
+                y=throughput["throughput"]/wavelengths,
+                x=wavelengths,
+            )
+            c26202_mags[i] = -2.5*np.log10(num / denom) + 2.5*np.log10(3631)
+
+        c26202_mags *= units.ABmag
+
+        orig_data_mags = np.zeros(len(bands))
+        final_data_mags = np.zeros(len(bands))
+        for i, band in enumerate(bands):
+            orig_data_mags[i] = stars[f"comcam_{band}_flux"][i1].quantity.to_value(units.ABmag)[0]
+
+            ratio = stars[f"comcam_{band}_flux"][i1] / c26202_mags[i].to_value(units.nJy)
+            stars[f"comcam_{band}_flux"] /= ratio
+
+            final_data_mags[i] = stars[f"comcam_{band}_flux"][i1].quantity.to_value(units.ABmag)[0]
+
+        print("C2602 (ComCam)")
+        print("Band CalSpec  Original  Corrected")
+        for i, band in enumerate(bands):
+            print(f"{band}     "
+                  f"{c26202_mags[i].value:0.5}  "
+                  f"{orig_data_mags[i]:0.5}    "
+                  f"{final_data_mags[i]:0.5}")
+
+    @property
+    def do_fit_flux_offset(self):
+        return False
+
+    @property
+    def ra_dec_range(self):
+        # This is the ECDFS + EDFS field.
+        return (50.0, 60.0, -50.0, -27.0)
