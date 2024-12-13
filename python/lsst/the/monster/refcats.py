@@ -20,6 +20,8 @@ __all__ = [
     "SkyMapperInfo",
     "SynthLSSTInfo",
     "VSTInfo",
+    "ComCamInfo",
+    "MonsterInfo",
 ]
 
 FLAG_DICT = {
@@ -33,6 +35,8 @@ FLAG_DICT = {
     "SLR": 128,
     "SynthLSST": 256,
     "LATISS": 512,
+    "Monster": 1024,
+    "ComCam": 2048,
 }
 
 
@@ -723,3 +727,41 @@ class LATISSInfo(RefcatInfo):
 
     def get_imz_color_range(self):
         return (0.05, 0.6)
+
+
+class MonsterInfo(RefcatInfo):
+    PATH = "/sdf/data/rubin/shared/refcats/the_monster_20240904"
+    NAME = "Monster"
+    FLAG = FLAG_DICT[NAME]
+    bands = ["u", "g", "r", "i", "z", "y"]
+
+    def get_flux_field(self, band):
+        if band == "u":
+            return f"monster_SDSS_{band}_flux"
+        else:
+            return f"monster_DES_{band}_flux"
+
+    def get_gmi_color_range(self):
+        return (0.0, 3.5)
+
+    def get_imz_color_range(self):
+        return (0.0, 0.75)
+
+
+class ComCamInfo(RefcatInfo):
+    NAME = "ComCam"
+    FLAG = FLAG_DICT[NAME]
+    bands = ["u", "g", "r", "i", "z", "y"]
+
+    def get_flux_field(self, band):
+        # Need name after conversion.
+        return f"comcam_{band}_flux"
+
+    def get_gmr_color_range(self):
+        return (0.35, 0.7)
+
+    def get_gmi_color_range(self):
+        return (0.0, 3.5)
+
+    def get_imz_color_range(self):
+        return (0.0, 0.75)
