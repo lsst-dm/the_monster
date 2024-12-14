@@ -455,6 +455,16 @@ class ComCamSplineMeasurer(SplineMeasurer):
 
     target_selection_band = "r"
 
+    def n_nodes(self, band=None):
+        if band in [None, "g", "r", "i", "z"]:
+            return 10
+        elif band in ["y"]:
+            return 7
+        elif band in ["u"]:
+            return 5
+
+        return 10
+
     def custom_target_catalog_reader(self):
         """Specialized reader for calibration stars from DRP processing
         (embargoed).
