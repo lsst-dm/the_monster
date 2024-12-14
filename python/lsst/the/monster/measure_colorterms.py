@@ -436,7 +436,6 @@ class GaiaXPuSplineMeasurer(SplineMeasurer):
 
     target_selection_band = "g"
 
-    @property
     def n_nodes(self, band=None):
         return 8
 
