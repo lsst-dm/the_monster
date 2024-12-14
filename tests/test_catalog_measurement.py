@@ -60,8 +60,7 @@ class GaiaXPSplineMeasurerTester(GaiaXPSplineMeasurer):
 
     testing_mode = True
 
-    @property
-    def n_nodes(self):
+    def n_nodes(self, band=None):
         return 5
 
 
@@ -86,8 +85,7 @@ class GaiaXPuSplineMeasurerTester(GaiaXPuSplineMeasurer):
 
     testing_mode = True
 
-    @property
-    def n_nodes(self):
+    def n_nodes(self, band=None):
         return 5
 
     @property
