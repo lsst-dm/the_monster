@@ -741,11 +741,14 @@ class MonsterInfo(RefcatInfo):
         else:
             return f"monster_DES_{band}_flux"
 
+    def get_gmr_color_range(self):
+        return (0.35, 0.7)
+
     def get_gmi_color_range(self):
-        return (0.0, 3.5)
+        return (0.35, 3.0)
 
     def get_imz_color_range(self):
-        return (0.0, 0.75)
+        return (0.0, 0.7)
 
 
 class ComCamInfo(RefcatInfo):
