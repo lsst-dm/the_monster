@@ -26,6 +26,7 @@ __all__ = [
     "VSTSplineMeasurer",
     "DESSplineMeasurer",
     "GaiaXPuSplineMeasurer",
+    "ComCamSplineMeasurer",
 ]
 
 
