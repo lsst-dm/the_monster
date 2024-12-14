@@ -182,7 +182,7 @@ class SplineMeasurer:
 
             color_range = cat_info.get_color_range(band)
 
-            nodes = np.linspace(color_range[0], color_range[1], self.n_nodes())
+            nodes = np.linspace(color_range[0], color_range[1], self.n_nodes(band=band))
 
             selected = cat_info.select_stars(cat_stars_matched, band)
             selected &= target_info.select_stars(target_stars_matched, band)
