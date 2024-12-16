@@ -369,9 +369,9 @@ class SplineMeasurer:
                 mag_target_corr1 = float((flux_target_corr1*units.nJy).to_value(units.ABmag))
 
                 c26202_message += f"{band}     "
-                c26202_message += f"{c26202_absmags[band_index].value:0.5f}  "
-                c26202_message += f"{mag_target_corr0:0.5f}    "
-                c26202_message += f"{mag_target_corr1:0.5f}\n"
+                c26202_message += f"{c26202_absmags[band_index].value:0.3f}  "
+                c26202_message += f"{mag_target_corr0:0.3f}    "
+                c26202_message += f"{mag_target_corr1:0.3f}\n"
 
             yaml_file = f"{cat_info.name}_to_{target_info.name}_band_{band}.yaml"
             colorterm.save(yaml_file, overwrite=overwrite)
@@ -690,9 +690,9 @@ class ComCamSplineMeasurer(SplineMeasurer):
         print("Band CalSpec  Original  Corrected")
         for i, band in enumerate(bands):
             print(f"{band}     "
-                  f"{c26202_mags[i].value:0.5f}  "
-                  f"{orig_data_mags[i]:0.5f}    "
-                  f"{final_data_mags[i]:0.5f}")
+                  f"{c26202_mags[i].value:0.3f}  "
+                  f"{orig_data_mags[i]:0.3f}    "
+                  f"{final_data_mags[i]:0.3f}")
 
     @property
     def do_fit_flux_offset(self):
