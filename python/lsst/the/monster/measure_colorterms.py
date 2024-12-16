@@ -43,7 +43,7 @@ class SplineMeasurer:
 
     testing_mode = False
 
-    custom_target_catalog_reader = None
+    use_custom_target_catalog_reader = False
 
     def n_nodes(self, band=None):
         return 10
@@ -65,6 +65,16 @@ class SplineMeasurer:
         ra_min, ra_max, dec_min, dec_max : `float`
         """
         return (45.0, 55.0, -30.0, -20.0)
+
+    def custom_target_catalog_reader(self):
+        """Specialized reader for calibration stars.
+
+        Returns
+        -------
+        catalog : `astropy.Table`
+            Astropy table catalog.
+        """
+        raise NotImplementedError("Must be implemented by subclass")
 
     def measure_spline_fit(
         self,
@@ -102,7 +112,7 @@ class SplineMeasurer:
         target_info = self.TargetCatInfoClass()
 
         # Read in all the TARGET stars in the region.
-        if self.custom_target_catalog_reader is not None:
+        if self.use_custom_target_catalog_reader:
             target_stars = self.custom_target_catalog_reader()
         else:
             target_stars = read_stars(target_info.path, indices, allow_missing=self.testing_mode)
@@ -454,6 +464,8 @@ class ComCamSplineMeasurer(SplineMeasurer):
     TargetCatInfoClass = ComCamInfo
 
     target_selection_band = "r"
+
+    use_custom_target_catalog_reader = True
 
     def n_nodes(self, band=None):
         if band in [None, "g", "r", "i", "z"]:
