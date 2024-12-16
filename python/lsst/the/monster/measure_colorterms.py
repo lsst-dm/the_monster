@@ -344,6 +344,9 @@ class SplineMeasurer:
 
                 ratio = flux_target_corr0 / c26202_absmags[band_index].to_value(units.nJy)
 
+                # Fix these for the plots.
+                flux_target /= ratio
+
                 # Redefine the color term with the new spline values.
                 colorterm = ColortermSpline(
                     cat_info.name,
