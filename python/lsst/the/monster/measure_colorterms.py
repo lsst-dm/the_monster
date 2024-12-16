@@ -479,7 +479,7 @@ class ComCamSplineMeasurer(SplineMeasurer):
         butler = Butler(
             "embargo",
             instrument="LSSTComCam",
-            collections=["u/erykoff/LSSTComCam/DM-47919/highlat/build4/run4-blue"],
+            collections=["LSSTComCam/runs/DRP/20241101_20241211/w_2024_50/DM-48128"],
         )
 
         fgcm_stars = butler.get("fgcm_Cycle5_StandardStars")
