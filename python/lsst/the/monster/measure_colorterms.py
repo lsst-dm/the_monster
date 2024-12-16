@@ -679,12 +679,12 @@ class ComCamSplineMeasurer(SplineMeasurer):
         orig_data_mags = np.zeros(len(bands))
         final_data_mags = np.zeros(len(bands))
         for i, band in enumerate(bands):
-            orig_data_mags[i] = stars[f"comcam_{band}_flux"][i1].quantity.to_value(units.ABmag)[0]
+            orig_data_mags[i] = stars[f"comcam_{band}_flux"][[i1]].quantity.to_value(units.ABmag)[0]
 
             ratio = stars[f"comcam_{band}_flux"][i1] / c26202_mags[i].to_value(units.nJy)
             stars[f"comcam_{band}_flux"] /= ratio
 
-            final_data_mags[i] = stars[f"comcam_{band}_flux"][i1].quantity.to_value(units.ABmag)[0]
+            final_data_mags[i] = stars[f"comcam_{band}_flux"][[i1]].quantity.to_value(units.ABmag)[0]
 
         print("C2602 (ComCam)")
         print("Band CalSpec  Original  Corrected")
