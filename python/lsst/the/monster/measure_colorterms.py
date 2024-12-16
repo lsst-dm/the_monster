@@ -333,7 +333,7 @@ class SplineMeasurer:
                 mag_spline_values=mag_spline_values,
             )
 
-            if self.do_check_26202_absolute_calibration:
+            if self.do_check_c26202_absolute_calibration:
                 # We first apply the color terms.
                 flux_target_corr0 = colorterm.apply(
                     np.array([cat_stars[cat_info.get_flux_field(band_1)][c26202_cat_index]]),
