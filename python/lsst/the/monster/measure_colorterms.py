@@ -607,8 +607,10 @@ class ComCamSplineMeasurer(SplineMeasurer):
     do_check_c26202_absolute_calibration = True
 
     def n_nodes(self, band=None):
-        if band in [None, "g", "r", "i", "z"]:
+        if band in [None, "r", "i", "z"]:
             return 10
+        elif band in ["g"]:
+            return 8
         elif band in ["y"]:
             return 7
         elif band in ["u"]:
