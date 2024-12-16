@@ -544,45 +544,10 @@ class ComCamSplineMeasurer(SplineMeasurer):
         if len(i1) == 0:
             raise RuntimeError("Could not find C26202 in catalog.")
 
-        spec_file = os.path.join(
-            getPackageDir("the_monster"),
-            "data",
-            "calspec",
-            "c26202_mod_008.fits",
-        )
-        spec = fitsio.read(spec_file, ext=1, lower=True)
+        target_info = self.TargetCatInfoClass()
+        bands = target_info.bands
 
-        spec_int_func = interpolate.interp1d(
-            spec["wavelength"],
-            1.0e23*spec["flux"]*spec["wavelength"]*spec["wavelength"]*1e-10/299792458.0,
-        )
-
-        bands = self.TargetCatInfoClass().bands
-        c26202_mags = np.zeros(len(bands))
-
-        for i, band in enumerate(bands):
-            throughput_file = os.path.join(
-                getPackageDir("the_monster"),
-                "data",
-                "throughputs",
-                f"total_comcam_{band}.ecsv",
-            )
-            throughput = Table.read(throughput_file)
-
-            wavelengths = throughput["wavelength"].quantity.to_value(units.Angstrom)
-
-            f_nu = spec_int_func(wavelengths)
-            num = integrate.simpson(
-                y=f_nu*throughput["throughput"]/wavelengths,
-                x=wavelengths,
-            )
-            denom = integrate.simpson(
-                y=throughput["throughput"]/wavelengths,
-                x=wavelengths,
-            )
-            c26202_mags[i] = -2.5*np.log10(num / denom) + 2.5*np.log10(3631)
-
-        c26202_mags *= units.ABmag
+        c26202_mags = self.compute_target_c26202_magnitudes()
 
         orig_data_mags = np.zeros(len(bands))
         final_data_mags = np.zeros(len(bands))
@@ -601,6 +566,78 @@ class ComCamSplineMeasurer(SplineMeasurer):
                   f"{c26202_mags[i].value:0.5}  "
                   f"{orig_data_mags[i]:0.5}    "
                   f"{final_data_mags[i]:0.5}")
+
+    def compute_target_c26202_magnitudes(self):
+        """Compute C26202 magnitudes for target catalog.
+
+        Returns
+        -------
+        c26202_abmags : `np.ndarray`
+            Array of c26202 AB magnitudes, one for each target band.
+        """
+        spec_file = os.path.join(
+            getPackageDir("the_monster"),
+            "data",
+            "calspec",
+            "c26202_mod_008.fits",
+        )
+        spec = fitsio.read(spec_file, ext=1, lower=True)
+
+        spec_int_func = interpolate.interp1d(
+            spec["wavelength"],
+            1.0e23*spec["flux"]*spec["wavelength"]*spec["wavelength"]*1e-10/299792458.0,
+        )
+
+        target_info = self.TargetCatInfoClass()
+
+        bands = target_info.bands
+        c26202_mags = np.zeros(len(bands))
+
+        throughputs = {}
+
+        if target_info.NAME == "ComCam":
+            for band in bands:
+                throughput_file = os.path.join(
+                    getPackageDir("the_monster"),
+                    "data",
+                    "throughputs",
+                    f"total_comcam_{band}.ecsv",
+                )
+                throughput = Table.read(throughput_file)
+
+                throughputs[band] = throughput
+        else:
+            raise NotImplementedError(f"Absolute calibration of C26202 for {target_info.NAME} not supported.")
+
+        for i, band in enumerate(bands):
+            throughput = throughputs[band]
+
+            wavelengths = throughput["wavelength"].quantity.to_value(units.Angstrom)
+
+            f_nu = spec_int_func(wavelengths)
+            num = integrate.simpson(
+                y=f_nu*throughput["throughput"]/wavelengths,
+                x=wavelengths,
+            )
+            denom = integrate.simpson(
+                y=throughput["throughput"]/wavelengths,
+                x=wavelengths,
+            )
+            c26202_mags[i] = -2.5*np.log10(num / denom) + 2.5*np.log10(3631)
+
+        c26202_mags *= units.ABmag
+
+        return c26202_mags
+
+    def check_c26202_calibration(self, stars):
+        """Check the C26202 absolute calibration.
+
+        Parameters
+        ----------
+        stars : `astropy.table.Table`
+            Catalog to compute absolute calibration for.
+        """
+        pass
 
     @property
     def do_fit_flux_offset(self):
