@@ -187,8 +187,8 @@ class SplineMeasurer:
             c26202_absmags = self.compute_target_c26202_magnitudes()
             c26202_cat_index = self.get_c26202_index(cat_stars)
 
-            print("C2602 (ComCam)")
-            print("Band CalSpec  Original  Corrected")
+            c26202_message = "C2602 (ComCam)\n"
+            c26202_message += "Band CalSpec  Original  Corrected\n"
 
         yaml_files = []
 
@@ -368,12 +368,12 @@ class SplineMeasurer:
                 )
                 mag_target_corr1 = float((flux_target_corr1*units.nJy).to_value(units.ABmag))
 
-                print(
-                    f"{band}     "
-                    f"{c26202_absmags[band_index].value:0.5}  "
-                    f"{mag_target_corr0:0.5}    "
-                    f"{mag_target_corr1:0.5}"
-                )
+                c26202_message += f"{band}     "
+                c26202_message += f"{c26202_absmags[band_index].value:0.5}  "
+                c26202_message += f"{mag_target_corr0:0.5}    "
+                c26202_message += f"{mag_target_corr1:0.5}\n"
+
+                print(c26202_message)
 
             yaml_file = f"{cat_info.name}_to_{target_info.name}_band_{band}.yaml"
             colorterm.save(yaml_file, overwrite=overwrite)
