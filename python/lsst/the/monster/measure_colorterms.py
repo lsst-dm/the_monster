@@ -183,9 +183,16 @@ class SplineMeasurer:
             mag_offset_cat_stars_matched2 = mag_offset_cat_stars[i1]
             cat_stars_matched2 = cat_stars[i2]
 
+        if self.do_check_c26202_absolute_calibration:
+            c26202_absmags = self.compute_target_c26202_magnitudes()
+            c26202_cat_index = self.get_c26202_index(cat_stars)
+
+            print("C2602 (ComCam)")
+            print("Band CalSpec  Original  Corrected")
+
         yaml_files = []
 
-        for band in bands:
+        for band_index, band in enumerate(bands):
             print(f"Working on transformations from {cat_info.name} to {target_info.name} for {band}")
             mag_color = cat_info.get_mag_colors(cat_stars_matched, band)
             flux_target = target_stars_matched[target_info.get_flux_field(band)]
@@ -326,6 +333,45 @@ class SplineMeasurer:
                 mag_spline_values=mag_spline_values,
             )
 
+            if self.do_check_26202_absolute_calibration:
+                # We first apply the color terms.
+                flux_target_corr0 = colorterm.apply(
+                    np.array([cat_stars[cat_info.get_flux_field(band_1)][c26202_cat_index]]),
+                    np.array([cat_stars[cat_info.get_flux_field(band_2)][c26202_cat_index]]),
+                    np.array([cat_stars[cat_info.get_flux_field(band)][c26202_cat_index]]),
+                )
+                mag_target_corr0 = (flux_target_corr0*units.nJy).to_value(units.ABmag)
+
+                ratio = flux_target_corr0 / c26202_absmags[band_index].to_value(units.nJy)
+
+                # Redefine the color term with the new spline values.
+                colorterm = ColortermSpline(
+                    cat_info.name,
+                    target_info.name,
+                    cat_info.get_flux_field(band_1),
+                    cat_info.get_flux_field(band_2),
+                    cat_info.get_flux_field(band),
+                    nodes,
+                    spline_values / ratio,
+                    flux_offset=flux_offset,
+                    mag_nodes=mag_nodes,
+                    mag_spline_values=mag_spline_values,
+                )
+
+                flux_target_corr1 = colorterm.apply(
+                    np.array([cat_stars[cat_info.get_flux_field(band_1)][c26202_cat_index]]),
+                    np.array([cat_stars[cat_info.get_flux_field(band_2)][c26202_cat_index]]),
+                    np.array([cat_stars[cat_info.get_flux_field(band)][c26202_cat_index]]),
+                )
+                mag_target_corr1 = (flux_target_corr1*units.nJy).to_value(units.ABmag)
+
+                print(
+                    f"{band}     "
+                    f"{c26202_absmags[band_index].value:0.5}  "
+                    f"{mag_target_corr0[band_index]:0.5}    "
+                    f"{mag_target_corr1[band_index]:0.5}"
+                )
+
             yaml_file = f"{cat_info.name}_to_{target_info.name}_band_{band}.yaml"
             colorterm.save(yaml_file, overwrite=overwrite)
 
@@ -411,6 +457,31 @@ class SplineMeasurer:
                     plt.savefig(f"{cat_info.name}_vs_{mag_offset_cat_info.name}_band_{band}_mag_offset.png")
 
         return yaml_files
+
+    def get_c26202_index(self, stars):
+        """Get the C26202 index for a catalog of stars.
+
+        Returns
+        -------
+        c26202_index : `int`
+            Index of C26202 in the catalog.
+        """
+        c26202_ra = 15.0*(3 + 32/60. + 32.843/(60.*60.))
+        c26202_dec = -1.0*(27 + 51/60. + 48.58/(60.*60.))
+
+        with Matcher(np.asarray(stars["coord_ra"]), np.asarray(stars["coord_dec"])) as m:
+            idx, i1, i2, d = m.query_knn(
+                [c26202_ra],
+                [c26202_dec],
+                k=1,
+                distance_upper_bound=1.0/3600.,
+                return_indices=True,
+            )
+
+        if len(i1) == 0:
+            raise RuntimeError("Could not find C26202 in catalog.")
+
+        return i1[0]
 
     def compute_target_c26202_magnitudes(self):
         """Compute C26202 magnitudes for target catalog.
@@ -581,7 +652,7 @@ class ComCamSplineMeasurer(SplineMeasurer):
             stars[f"comcam_{band}_flux"] = flux*units.nJy
             stars[f"comcam_{band}_fluxErr"] = flux_err*units.nJy
 
-        self.apply_c26202_calibration(stars)
+        # self.apply_c26202_calibration(stars)
 
         return stars
 
@@ -593,20 +664,7 @@ class ComCamSplineMeasurer(SplineMeasurer):
         stars : `astropy.table.Table`
             Catalog to compute absolute calibration for.
         """
-        c26202_ra = 15.0*(3 + 32/60. + 32.843/(60.*60.))
-        c26202_dec = -1.0*(27 + 51/60. + 48.58/(60.*60.))
-
-        with Matcher(np.asarray(stars["coord_ra"]), np.asarray(stars["coord_dec"])) as m:
-            idx, i1, i2, d = m.query_knn(
-                [c26202_ra],
-                [c26202_dec],
-                k=1,
-                distance_upper_bound=1.0/3600.,
-                return_indices=True,
-            )
-
-        if len(i1) == 0:
-            raise RuntimeError("Could not find C26202 in catalog.")
+        i1 = self.get_c26202_index(stars)
 
         target_info = self.TargetCatInfoClass()
         bands = target_info.bands
@@ -630,16 +688,6 @@ class ComCamSplineMeasurer(SplineMeasurer):
                   f"{c26202_mags[i].value:0.5}  "
                   f"{orig_data_mags[i]:0.5}    "
                   f"{final_data_mags[i]:0.5}")
-
-    def check_c26202_calibration(self, stars):
-        """Check the C26202 absolute calibration.
-
-        Parameters
-        ----------
-        stars : `astropy.table.Table`
-            Catalog to compute absolute calibration for.
-        """
-        pass
 
     @property
     def do_fit_flux_offset(self):
