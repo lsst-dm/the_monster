@@ -368,8 +368,8 @@ class SplineMeasurer:
                 print(
                     f"{band}     "
                     f"{c26202_absmags[band_index].value:0.5}  "
-                    f"{mag_target_corr0[band_index]:0.5}    "
-                    f"{mag_target_corr1[band_index]:0.5}"
+                    f"{mag_target_corr0:0.5}    "
+                    f"{mag_target_corr1:0.5}"
                 )
 
             yaml_file = f"{cat_info.name}_to_{target_info.name}_band_{band}.yaml"
