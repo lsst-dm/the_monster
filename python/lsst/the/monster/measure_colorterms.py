@@ -373,8 +373,6 @@ class SplineMeasurer:
                 c26202_message += f"{mag_target_corr0:0.5}    "
                 c26202_message += f"{mag_target_corr1:0.5}\n"
 
-                print(c26202_message)
-
             yaml_file = f"{cat_info.name}_to_{target_info.name}_band_{band}.yaml"
             colorterm.save(yaml_file, overwrite=overwrite)
 
@@ -458,6 +456,9 @@ class SplineMeasurer:
                         warnings.simplefilter("ignore", UserWarning)
                         plt.tight_layout()
                     plt.savefig(f"{cat_info.name}_vs_{mag_offset_cat_info.name}_band_{band}_mag_offset.png")
+
+        if self.do_check_c26202_absolute_calibration:
+            print(c26202_message)
 
         return yaml_files
 
