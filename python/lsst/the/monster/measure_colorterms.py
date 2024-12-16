@@ -340,7 +340,7 @@ class SplineMeasurer:
                     np.array([cat_stars[cat_info.get_flux_field(band_2)][c26202_cat_index]]),
                     np.array([cat_stars[cat_info.get_flux_field(band)][c26202_cat_index]]),
                 )
-                mag_target_corr0 = float((flux_target_corr0*units.nJy).to_value(units.ABmag))
+                mag_target_corr0 = float((flux_target_corr0*units.nJy).to_value(units.ABmag)[0])
 
                 ratio = flux_target_corr0 / c26202_absmags[band_index].to_value(units.nJy)
 
@@ -366,7 +366,7 @@ class SplineMeasurer:
                     np.array([cat_stars[cat_info.get_flux_field(band_2)][c26202_cat_index]]),
                     np.array([cat_stars[cat_info.get_flux_field(band)][c26202_cat_index]]),
                 )
-                mag_target_corr1 = float((flux_target_corr1*units.nJy).to_value(units.ABmag))
+                mag_target_corr1 = float((flux_target_corr1*units.nJy).to_value(units.ABmag)[0])
 
                 c26202_message += f"{band}     "
                 c26202_message += f"{c26202_absmags[band_index].value:0.3f}  "
@@ -515,7 +515,7 @@ class SplineMeasurer:
 
         throughputs = {}
 
-        if target_info.NAME == "ComCam":
+        if target_info.NAME in ("ComCam", "TestComCam"):
             for band in bands:
                 throughput_file = os.path.join(
                     getPackageDir("the_monster"),
@@ -627,17 +627,30 @@ class ComCamSplineMeasurer(SplineMeasurer):
         catalog : `astropy.Table`
             Astropy table catalog.
         """
-        from lsst.daf.butler import Butler
+        if self.testing_mode:
+            target_info = self.TargetCatInfoClass()
+            fgcm_stars = Table.read(
+                os.path.join(
+                    target_info.PATH,
+                    "comcam_test_stars.fits",
+                ),
+            )
 
-        butler = Butler(
-            "embargo",
-            instrument="LSSTComCam",
-            collections=["LSSTComCam/runs/DRP/20241101_20241211/w_2024_50/DM-48128"],
-        )
+            bands = ["u", "g", "r", "i", "z", "y"]
+        else:
+            from lsst.daf.butler import Butler
 
-        fgcm_stars = butler.get("fgcm_Cycle5_StandardStars")
-        md = fgcm_stars.metadata
-        fgcm_stars = fgcm_stars.asAstropy()
+            butler = Butler(
+                "embargo",
+                instrument="LSSTComCam",
+                collections=["LSSTComCam/runs/DRP/20241101_20241211/w_2024_50/DM-48128"],
+            )
+
+            fgcm_stars = butler.get("fgcm_Cycle5_StandardStars")
+            md = fgcm_stars.metadata
+            fgcm_stars = fgcm_stars.asAstropy()
+
+            bands = md.getArray("BANDS")
 
         fgcm_stars["coord_ra"].convert_unit_to(units.degree)
         fgcm_stars["coord_dec"].convert_unit_to(units.degree)
@@ -650,7 +663,7 @@ class ComCamSplineMeasurer(SplineMeasurer):
             },
         )
 
-        for i, band in enumerate(md.getArray("BANDS")):
+        for i, band in enumerate(bands):
             flux = (fgcm_stars["mag_std_noabs"][:, i]*units.ABmag).to_value(units.nJy)
             flux[fgcm_stars["ngood"][:, i] < 2] = np.nan
             flux_err = (np.log(10)/2.5) * np.asarray(fgcm_stars["magErr_std"][:, i]) * flux
