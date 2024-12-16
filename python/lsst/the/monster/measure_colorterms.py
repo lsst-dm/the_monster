@@ -656,11 +656,12 @@ class ComCamSplineMeasurer(SplineMeasurer):
             stars[f"comcam_{band}_flux"] = flux*units.nJy
             stars[f"comcam_{band}_fluxErr"] = flux_err*units.nJy
 
-        # self.apply_c26202_calibration(stars)
+        # This is useful for getting the color ranges to match up consistently.
+        self.apply_comcam_c26202_calibration(stars)
 
         return stars
 
-    def apply_c26202_calibration(self, stars):
+    def apply_comcam_c26202_calibration(self, stars):
         """Apply C26202 absolute calibration to a catalog.
 
         Parameters
