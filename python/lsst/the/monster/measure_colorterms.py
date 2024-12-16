@@ -340,7 +340,7 @@ class SplineMeasurer:
                     np.array([cat_stars[cat_info.get_flux_field(band_2)][c26202_cat_index]]),
                     np.array([cat_stars[cat_info.get_flux_field(band)][c26202_cat_index]]),
                 )
-                mag_target_corr0 = (flux_target_corr0*units.nJy).to_value(units.ABmag)
+                mag_target_corr0 = float((flux_target_corr0*units.nJy).to_value(units.ABmag))
 
                 ratio = flux_target_corr0 / c26202_absmags[band_index].to_value(units.nJy)
 
@@ -363,7 +363,7 @@ class SplineMeasurer:
                     np.array([cat_stars[cat_info.get_flux_field(band_2)][c26202_cat_index]]),
                     np.array([cat_stars[cat_info.get_flux_field(band)][c26202_cat_index]]),
                 )
-                mag_target_corr1 = (flux_target_corr1*units.nJy).to_value(units.ABmag)
+                mag_target_corr1 = float((flux_target_corr1*units.nJy).to_value(units.ABmag))
 
                 print(
                     f"{band}     "
