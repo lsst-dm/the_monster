@@ -1,0 +1,22 @@
+flux_offset: 0.0
+nodes:
+- 0.0
+- 0.11666666666666665
+- 0.2333333333333333
+- 0.35
+- 0.4666666666666666
+- 0.5833333333333333
+- 0.7
+source_color_field_1: monster_DES_i_flux
+source_color_field_2: monster_DES_z_flux
+source_field: monster_DES_y_flux
+source_survey: Monster
+spline_values:
+- 1.0306658767442902
+- 1.0188952600271353
+- 1.014526124052815
+- 1.0115064917525474
+- 1.0068120628850747
+- 1.0023654531587292
+- 0.9976634639826649
+target_survey: ComCam
