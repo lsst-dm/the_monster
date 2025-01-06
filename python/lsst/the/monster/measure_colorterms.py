@@ -636,8 +636,8 @@ class ComCamSplineMeasurer(SplineMeasurer):
             return 7
         elif band in ["u"]:
             return 5
-
-        return 10
+        else:
+            raise ValueError("Unknown ComCam band sent to n_nodes()")
 
     def get_calspec_star_position(self):
         # docstring inherited.
