@@ -44,7 +44,7 @@ class SplineMeasurer:
     testing_mode = False
 
     use_custom_target_catalog_reader = False
-    do_check_c26202_absolute_calibration = False
+    do_check_calspec_star_absolute_calibration = False
 
     def n_nodes(self, band=None):
         return 10
@@ -183,12 +183,12 @@ class SplineMeasurer:
             mag_offset_cat_stars_matched2 = mag_offset_cat_stars[i1]
             cat_stars_matched2 = cat_stars[i2]
 
-        if self.do_check_c26202_absolute_calibration:
-            c26202_absmags = self.compute_target_c26202_magnitudes()
-            c26202_cat_index = self.get_c26202_index(cat_stars)
+        if self.do_check_calspec_star_absolute_calibration:
+            calspec_star_absmags = self.compute_target_calspec_star_magnitudes()
+            calspec_star_name, calspec_star_cat_index = self.get_calspec_star_index(cat_stars)
 
-            c26202_message = "C2602 (ComCam)\n"
-            c26202_message += "Band CalSpec  Original  Corrected\n"
+            calspec_star_message = f"{calspec_star_name} ({target_info.NAME})\n"
+            calspec_star_message += "Band CalSpec  Original  Corrected\n"
 
         yaml_files = []
 
@@ -333,16 +333,16 @@ class SplineMeasurer:
                 mag_spline_values=mag_spline_values,
             )
 
-            if self.do_check_c26202_absolute_calibration:
+            if self.do_check_calspec_star_absolute_calibration:
                 # We first apply the color terms.
                 flux_target_corr0 = colorterm.apply(
-                    np.array([cat_stars[cat_info.get_flux_field(band_1)][c26202_cat_index]]),
-                    np.array([cat_stars[cat_info.get_flux_field(band_2)][c26202_cat_index]]),
-                    np.array([cat_stars[cat_info.get_flux_field(band)][c26202_cat_index]]),
+                    np.array([cat_stars[cat_info.get_flux_field(band_1)][calspec_star_cat_index]]),
+                    np.array([cat_stars[cat_info.get_flux_field(band_2)][calspec_star_cat_index]]),
+                    np.array([cat_stars[cat_info.get_flux_field(band)][calspec_star_cat_index]]),
                 )
                 mag_target_corr0 = float((flux_target_corr0*units.nJy).to_value(units.ABmag)[0])
 
-                ratio = flux_target_corr0 / c26202_absmags[band_index].to_value(units.nJy)
+                ratio = flux_target_corr0 / calspec_star_absmags[band_index].to_value(units.nJy)
 
                 # Fix these for the plots.
                 flux_target /= ratio
@@ -362,16 +362,16 @@ class SplineMeasurer:
                 )
 
                 flux_target_corr1 = colorterm.apply(
-                    np.array([cat_stars[cat_info.get_flux_field(band_1)][c26202_cat_index]]),
-                    np.array([cat_stars[cat_info.get_flux_field(band_2)][c26202_cat_index]]),
-                    np.array([cat_stars[cat_info.get_flux_field(band)][c26202_cat_index]]),
+                    np.array([cat_stars[cat_info.get_flux_field(band_1)][calspec_star_cat_index]]),
+                    np.array([cat_stars[cat_info.get_flux_field(band_2)][calspec_star_cat_index]]),
+                    np.array([cat_stars[cat_info.get_flux_field(band)][calspec_star_cat_index]]),
                 )
                 mag_target_corr1 = float((flux_target_corr1*units.nJy).to_value(units.ABmag)[0])
 
-                c26202_message += f"{band}     "
-                c26202_message += f"{c26202_absmags[band_index].value:0.3f}  "
-                c26202_message += f"{mag_target_corr0:0.3f}    "
-                c26202_message += f"{mag_target_corr1:0.3f}\n"
+                calspec_star_message += f"{band}     "
+                calspec_star_message += f"{calspec_star_absmags[band_index].value:0.3f}  "
+                calspec_star_message += f"{mag_target_corr0:0.3f}    "
+                calspec_star_message += f"{mag_target_corr1:0.3f}\n"
 
             yaml_file = f"{cat_info.name}_to_{target_info.name}_band_{band}.yaml"
             colorterm.save(yaml_file, overwrite=overwrite)
@@ -457,50 +457,70 @@ class SplineMeasurer:
                         plt.tight_layout()
                     plt.savefig(f"{cat_info.name}_vs_{mag_offset_cat_info.name}_band_{band}_mag_offset.png")
 
-        if self.do_check_c26202_absolute_calibration:
-            print(c26202_message)
+        if self.do_check_calspec_star_absolute_calibration:
+            print(calspec_star_message)
 
         return yaml_files
 
-    def get_c26202_index(self, stars):
-        """Get the C26202 index for a catalog of stars.
+    def get_calspec_star_position(self):
+        """Get a CALSPEC name and position.
 
         Returns
         -------
-        c26202_index : `int`
-            Index of C26202 in the catalog.
+        calspec_star_name : `str`
+            Name of the CALSPEC star in the catalog.
+        calspec_star_ra : `float`
+            RA of the CALSPEC star in the catalog.
+        calspec_star_dec : `float`
+            Dec of the CALSPEC star in the catalog.
         """
-        c26202_ra = 15.0*(3 + 32/60. + 32.843/(60.*60.))
-        c26202_dec = -1.0*(27 + 51/60. + 48.58/(60.*60.))
+        raise NotImplementedError("Must be set for a given catalog.")
+
+    def get_calspec_star_spec_file(self):
+        """Get a CALSPEC star spectroscopic file.
+
+        Returns
+        -------
+        specfile : `str`
+            Filename for a CALSPEC star in the catalog.
+        """
+        raise NotImplementedError("Must be set for a given catalog.")
+
+    def get_calspec_star_index(self, stars):
+        """Get the CALSPEC index for a catalog of stars.
+
+        Returns
+        -------
+        calspec_star_name : `str`
+            Name of the CALSPEC star in the catalog.
+        calspec_star_index : `int`
+            Index of CALSPEC star in the catalog.
+        """
+        calspec_star_name, calspec_star_ra, calspec_star_dec = self.get_calspec_star_position()
 
         with Matcher(np.asarray(stars["coord_ra"]), np.asarray(stars["coord_dec"])) as m:
             idx, i1, i2, d = m.query_knn(
-                [c26202_ra],
-                [c26202_dec],
+                [calspec_star_ra],
+                [calspec_star_dec],
                 k=1,
                 distance_upper_bound=1.0/3600.,
                 return_indices=True,
             )
 
         if len(i1) == 0:
-            raise RuntimeError("Could not find C26202 in catalog.")
+            raise RuntimeError(f"Could not find {calspec_star_name} in catalog.")
 
-        return i1[0]
+        return calspec_star_name, i1[0]
 
-    def compute_target_c26202_magnitudes(self):
-        """Compute C26202 magnitudes for target catalog.
+    def compute_target_calspec_star_magnitudes(self):
+        """Compute CALSPEC magnitudes for target catalog.
 
         Returns
         -------
-        c26202_abmags : `np.ndarray`
-            Array of c26202 AB magnitudes, one for each target band.
+        calspec_star_abmags : `np.ndarray`
+            Array of calspec_star AB magnitudes, one for each target band.
         """
-        spec_file = os.path.join(
-            getPackageDir("the_monster"),
-            "data",
-            "calspec",
-            "c26202_mod_008.fits",
-        )
+        spec_file = self.get_calspec_star_spec_file()
         spec = fitsio.read(spec_file, ext=1, lower=True)
 
         spec_int_func = interpolate.interp1d(
@@ -511,10 +531,11 @@ class SplineMeasurer:
         target_info = self.TargetCatInfoClass()
 
         bands = target_info.bands
-        c26202_mags = np.zeros(len(bands))
+        calspec_star_mags = np.zeros(len(bands))
 
         throughputs = {}
 
+        # This can be expanded as necessary.
         if target_info.NAME in ("ComCam", "TestComCam"):
             for band in bands:
                 throughput_file = os.path.join(
@@ -527,7 +548,7 @@ class SplineMeasurer:
 
                 throughputs[band] = throughput
         else:
-            raise NotImplementedError(f"Absolute calibration of C26202 for {target_info.NAME} not supported.")
+            raise NotImplementedError(f"Abs. calibration of CALSPEC for {target_info.NAME} not supported.")
 
         for i, band in enumerate(bands):
             throughput = throughputs[band]
@@ -543,11 +564,11 @@ class SplineMeasurer:
                 y=throughput["throughput"]/wavelengths,
                 x=wavelengths,
             )
-            c26202_mags[i] = -2.5*np.log10(num / denom) + 2.5*np.log10(3631)
+            calspec_star_mags[i] = -2.5*np.log10(num / denom) + 2.5*np.log10(3631)
 
-        c26202_mags *= units.ABmag
+        calspec_star_mags *= units.ABmag
 
-        return c26202_mags
+        return calspec_star_mags
 
 
 class GaiaXPSplineMeasurer(SplineMeasurer):
@@ -604,7 +625,7 @@ class ComCamSplineMeasurer(SplineMeasurer):
     target_selection_band = "r"
 
     use_custom_target_catalog_reader = True
-    do_check_c26202_absolute_calibration = True
+    do_check_calspec_star_absolute_calibration = True
 
     def n_nodes(self, band=None):
         if band in [None, "r", "i", "z"]:
@@ -617,6 +638,23 @@ class ComCamSplineMeasurer(SplineMeasurer):
             return 5
 
         return 10
+
+    def get_calspec_star_position(self):
+        # docstring inherited.
+        calspec_star_ra = 15.0*(3 + 32/60. + 32.843/(60.*60.))
+        calspec_star_dec = -1.0*(27 + 51/60. + 48.58/(60.*60.))
+
+        return "C26202", calspec_star_ra, calspec_star_dec
+
+    def get_calspec_star_spec_file(self):
+        # docstring inherited.
+        spec_file = os.path.join(
+            getPackageDir("the_monster"),
+            "data",
+            "calspec",
+            "c26202_mod_008.fits",
+        )
+        return spec_file
 
     def custom_target_catalog_reader(self):
         """Specialized reader for calibration stars from DRP processing
@@ -672,40 +710,40 @@ class ComCamSplineMeasurer(SplineMeasurer):
             stars[f"comcam_{band}_fluxErr"] = flux_err*units.nJy
 
         # This is useful for getting the color ranges to match up consistently.
-        self.apply_comcam_c26202_calibration(stars)
+        self.apply_comcam_calspec_star_calibration(stars)
 
         return stars
 
-    def apply_comcam_c26202_calibration(self, stars):
-        """Apply C26202 absolute calibration to a catalog.
+    def apply_comcam_calspec_star_calibration(self, stars):
+        """Apply CALSPEC star absolute calibration to a catalog.
 
         Parameters
         ----------
         stars : `astropy.table.Table`
             Catalog to compute absolute calibration for.
         """
-        i1 = self.get_c26202_index(stars)
+        calspec_star_name, i1 = self.get_calspec_star_index(stars)
 
         target_info = self.TargetCatInfoClass()
         bands = target_info.bands
 
-        c26202_mags = self.compute_target_c26202_magnitudes()
+        calspec_star_mags = self.compute_target_calspec_star_magnitudes()
 
         orig_data_mags = np.zeros(len(bands))
         final_data_mags = np.zeros(len(bands))
         for i, band in enumerate(bands):
             orig_data_mags[i] = stars[f"comcam_{band}_flux"][[i1]].quantity.to_value(units.ABmag)[0]
 
-            ratio = stars[f"comcam_{band}_flux"][i1] / c26202_mags[i].to_value(units.nJy)
+            ratio = stars[f"comcam_{band}_flux"][i1] / calspec_star_mags[i].to_value(units.nJy)
             stars[f"comcam_{band}_flux"] /= ratio
 
             final_data_mags[i] = stars[f"comcam_{band}_flux"][[i1]].quantity.to_value(units.ABmag)[0]
 
-        print("C2602 (ComCam)")
+        print(f"{calspec_star_name} ({target_info.NAME})")
         print("Band CalSpec  Original  Corrected")
         for i, band in enumerate(bands):
             print(f"{band}     "
-                  f"{c26202_mags[i].value:0.3f}  "
+                  f"{calspec_star_mags[i].value:0.3f}  "
                   f"{orig_data_mags[i]:0.3f}    "
                   f"{final_data_mags[i]:0.3f}")
 
