@@ -8,11 +8,21 @@ matplotlib.use("Agg")
 
 import lsst.utils  # noqa: E402
 
-from lsst.the.monster import GaiaDR3Info, GaiaXPInfo, GaiaXPuInfo, DESInfo, PS1Info, SDSSInfo  # noqa: E402
+from lsst.the.monster import (  # noqa: E402
+    GaiaDR3Info,  # noqa: E402
+    GaiaXPInfo,  # noqa: E402
+    GaiaXPuInfo,  # noqa: E402
+    DESInfo,  # noqa: E402
+    PS1Info,  # noqa: E402
+    SDSSInfo,  # noqa: E402
+    MonsterInfo,  # noqa: E402
+    ComCamInfo,  # noqa: E402
+)
 from lsst.the.monster import (  # noqa: E402
     GaiaXPSplineMeasurer,  # noqa: E402
     PS1SplineMeasurer,  # noqa: E402
     GaiaXPuSplineMeasurer,  # noqa: E402
+    ComCamSplineMeasurer,  # noqa: E402
 )
 
 
@@ -53,6 +63,16 @@ class SDSSInfoTester(SDSSInfo):
     COLORTERM_PATH = os.path.join(ROOT, "data", "colorterms")
 
 
+class MonsterInfoTester(MonsterInfo):
+    PATH = os.path.join(ROOT, "data", "the_monster_20240904")
+    NAME = "TestMonster"
+
+
+class ComCamInfoTester(ComCamInfo):
+    PATH = os.path.join(ROOT, "data", "comcam")
+    NAME = "TestComCam"
+
+
 class GaiaXPSplineMeasurerTester(GaiaXPSplineMeasurer):
     CatInfoClass = GaiaXPInfoTester
     TargetCatInfoClass = DESInfoTester
@@ -60,8 +80,7 @@ class GaiaXPSplineMeasurerTester(GaiaXPSplineMeasurer):
 
     testing_mode = True
 
-    @property
-    def n_nodes(self):
+    def n_nodes(self, band=None):
         return 5
 
 
@@ -86,13 +105,20 @@ class GaiaXPuSplineMeasurerTester(GaiaXPuSplineMeasurer):
 
     testing_mode = True
 
-    @property
-    def n_nodes(self):
+    def n_nodes(self, band=None):
         return 5
 
     @property
     def ra_dec_range(self):
         return (150, 180, 10, 30)
+
+
+class ComCamSplineMeasurerTester(ComCamSplineMeasurer):
+    CatInfoClass = MonsterInfoTester
+    TargetCatInfoClass = ComCamInfoTester
+    GaiaCatInfoClass = GaiaDR3InfoTester
+
+    testing_mode = True
 
 
 class SplineMeasurerTest(lsst.utils.tests.TestCase):
@@ -149,6 +175,24 @@ class SplineMeasurerTest(lsst.utils.tests.TestCase):
             for band in ["u"]:
                 self.assertTrue(os.path.isfile(f"TestGaiaXPu_to_TestSDSS_band_{band}_color_term.png"))
                 self.assertTrue(os.path.isfile(f"TestGaiaXPu_to_TestSDSS_band_{band}_flux_residuals.png"))
+
+    def test_comcam_measure(self):
+        bands = ["u", "g", "r", "i", "z", "y"]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            os.chdir(temp_dir)
+
+            measurer = ComCamSplineMeasurerTester()
+
+            yaml_files = measurer.measure_spline_fit(bands=bands)
+
+            # Check that the yaml files were created.
+            for yaml_file in yaml_files:
+                self.assertTrue(os.path.isfile(yaml_file))
+
+            # And check for the QA plots.
+            for band in bands:
+                self.assertTrue(os.path.isfile(f"TestMonster_to_TestComCam_band_{band}_color_term.png"))
+                self.assertTrue(os.path.isfile(f"TestMonster_to_TestComCam_band_{band}_flux_residuals.png"))
 
 
 class TestMemory(lsst.utils.tests.MemoryTestCase):

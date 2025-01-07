@@ -5,7 +5,7 @@ import lsst.utils
 
 from .splinecolorterms import ColortermSpline
 from .refcats import (GaiaXPInfo, GaiaXPuInfo, GaiaDR3Info, SkyMapperInfo, PS1Info,
-                      VSTInfo, DESInfo, SynthLSSTInfo, LATISSInfo, SDSSuInfo,
+                      VSTInfo, DESInfo, ComCamInfo, LATISSInfo, SDSSuInfo,
                       FLAG_DICT)
 from .utils import read_stars, makeMonsterSchema, makeMonsterCat
 from .measure_uband_offsetmaps import UBandOffsetMapApplicator
@@ -23,7 +23,7 @@ For each shard:
 (3-6): Within a loop over surveys in order from lowest to highest priority:
 3. Read each of the (already transformed to the DES system) refcats for the
     shard
-4. Transform each refcat to the (synthetic) system (e.g., LSST or LATISS)
+4. Transform each refcat to the system (e.g., ComCam or LATISS)
 5. Match each refcat to the Gaia DR3 catalog
 6. Update the fluxes, flux errors, and flags whenever a value is non-NaN
 """
@@ -65,7 +65,7 @@ class AssembleMonsterRefcat:
                  catalog_info_class_list=[VSTInfo, SkyMapperInfo,
                                           PS1Info, GaiaXPInfo, DESInfo],
                  uband_catalog_info_class_list=[SDSSuInfo, GaiaXPuInfo],
-                 target_catalog_info_class_list=[SynthLSSTInfo, LATISSInfo, DESInfo, SDSSuInfo],
+                 target_catalog_info_class_list=[ComCamInfo, LATISSInfo, DESInfo, SDSSuInfo],
                  monster_path_inp=None,
                  do_u_band_slr=True,
                  uband_ref_class=GaiaXPuInfo,

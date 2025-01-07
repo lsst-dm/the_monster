@@ -145,12 +145,12 @@ class SynthLSSTSplineMeasurer:
                 f_nu = int_func(tput_lambda)
 
                 num = integrate.simpson(
-                    x=f_nu*throughputs[band]["throughput"]/tput_lambda,
-                    y=tput_lambda
+                    y=f_nu*throughputs[band]["throughput"]/tput_lambda,
+                    x=tput_lambda,
                 )
                 denom = integrate.simpson(
-                    x=throughputs[band]["throughput"]/tput_lambda,
-                    y=tput_lambda
+                    y=throughputs[band]["throughput"]/tput_lambda,
+                    x=tput_lambda,
                 )
 
                 synth_lsst_cat[lsst_info.get_flux_field(band)][i] = num/denom
@@ -186,12 +186,12 @@ class SynthLSSTSplineMeasurer:
                 f_nu = int_func(tput_lambda)
 
                 num = integrate.simpson(
-                    x=f_nu*des_passbands[band]/tput_lambda,
-                    y=tput_lambda
+                    y=f_nu*des_passbands[band]/tput_lambda,
+                    x=tput_lambda,
                 )
                 denom = integrate.simpson(
-                    x=des_passbands[band],
-                    y=tput_lambda
+                    y=des_passbands[band]/tput_lambda,
+                    x=tput_lambda,
                 )
 
                 synth_des_cat[des_info.get_flux_field(band)][i] = num/denom
