@@ -4,6 +4,7 @@ import numpy as np
 
 from lsst.afw.table import SimpleCatalog
 import lsst.afw.table as afwTable
+from lsst.meas.algorithms.convertReferenceCatalog import addRefCatMetadata
 from .refcats import FLAG_DICT
 
 __all__ = ["read_stars", "makeRefSchema", "makeRefCat",
@@ -173,7 +174,10 @@ def makeMonsterSchema(gaia_catalog_columns, target_systems):
     # loop to transfer entries. Also, the flux/error/flag columns don't have
     # units in the input table, so we'll treat them separately to add the
     # units. Thus we exclude them from the "transfer" loop as well.
-    exclude_columns = ["id", "coord_ra", "coord_dec"]
+    # because we converted the gaia catalog to an astropy table, we need
+    # to handle the columns that are angles (pm_ra, pm_dec, parallax)
+    # separately, so they get excluded as well.
+    exclude_columns = ["id", "coord_ra", "coord_dec", "pm_ra", "pm_dec", "parallax",]
     for target_system, band in target_systems:
         exclude_columns.append(f"monster_{target_system}_{band}_flux")
         exclude_columns.append(f"monster_{target_system}_{band}_fluxErr")
@@ -200,6 +204,21 @@ def makeMonsterSchema(gaia_catalog_columns, target_systems):
                                        doc=col.description,
                                        units=''
                                        )
+        # these columns are converted from Field=Angle to Field=Double
+        # when the catalog is converted to an astopy table in read_stars
+        # so we need to add them as Angles to the schema.
+        elif col.name in ["pm_ra", "pm_dec"]:
+            monsterSchema.addField(col.name,
+                                   type='Angle',
+                                   doc=col.description,
+                                   units='rad / yr'
+                                   )
+        elif col.name in ["parallax"]:
+            monsterSchema.addField(col.name,
+                                   type='Angle',
+                                   doc=col.description,
+                                   units='rad'
+                                   )
 
     # Add columns to the schema for the flux, flux error, and flags.
     for target_system, band in target_systems:
@@ -241,6 +260,7 @@ def makeMonsterCat(monsterSchema, monsterTable):
     """
 
     monsterCat = afwTable.SimpleCatalog(monsterSchema)
+    addRefCatMetadata(monsterCat)
     monsterCat.resize(np.size(monsterTable))
     for col in monsterTable.itercols():
         monsterCat[col.name] = monsterTable[col.name]

@@ -131,7 +131,9 @@ class MonsterAssembleTest(lsst.utils.tests.TestCase):
             # Read the output file.
             fits_path = os.path.join(temp_dir, str(htmid) + ".fits")
             output = afw.table.SimpleCatalog.readFits(fits_path)
-
+            # Check the output has metadata and a REFCAT_FORMAT_VERSION.
+            self.assertTrue(output.getMetadata() is not None)
+            self.assertTrue(output.getMetadata()["REFCAT_FORMAT_VERSION"] == 2)
             # Check the output.
             self.assertEqual(len(output), 1579)
             self.assertEqual(sorted(output.schema.getOrderedNames()), sorted(self.outputColumns))
