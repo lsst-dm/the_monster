@@ -4,9 +4,9 @@ nodes:
 - 0.16666666666666663
 - 0.8333333333333333
 - 1.5
-source_color_field_1: g
-source_color_field_2: r
-source_field: u
+source_color_field_1: monster_DES_g_flux
+source_color_field_2: monster_DES_r_flux
+source_field: monster_SDSS_u_flux
 source_survey: Monster
 spline_values:
 - 1.0299405999929636
