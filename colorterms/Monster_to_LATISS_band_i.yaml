@@ -7,7 +7,7 @@ nodes:
 source_color_field_1: MAG_STD_G_flux
 source_color_field_2: MAG_STD_I_flux
 source_field: MAG_STD_I_flux
-source_survey: DES
+source_survey: Monster
 spline_values:
 - 0.9788128072690478
 - 0.9718524219364725

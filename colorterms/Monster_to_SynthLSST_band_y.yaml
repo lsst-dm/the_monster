@@ -6,11 +6,11 @@ nodes:
 - 0.6
 source_color_field_1: MAG_STD_I_flux
 source_color_field_2: MAG_STD_Z_flux
-source_field: MAG_STD_Z_flux
-source_survey: DES
+source_field: MAG_STD_Y_flux
+source_survey: Monster
 spline_values:
-- 1.0734327192101834
-- 1.039587438383697
-- 0.9732524116142265
-- 0.9356651867553314
+- 1.0232517016984108
+- 1.0005794956426923
+- 1.0054886603071282
+- 0.9384190646928243
 target_survey: SynthLSST

@@ -7,7 +7,7 @@ nodes:
 source_color_field_1: g
 source_color_field_2: r
 source_field: u
-source_survey: SDSS
+source_survey: Monster
 spline_values:
 - 1.0299405999929636
 - 0.8856042812299526
