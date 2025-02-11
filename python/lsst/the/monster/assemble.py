@@ -391,7 +391,7 @@ class AssembleMonsterRefcat:
                     gaia_stars_all[flux_col.replace('flux', 'source_flag')][idx1[flag]] = cat_info.flag
 
         if self.monster_path_inp is None:
-            monster_path = "/sdf/data/rubin/shared/the_monster/sharded_refcats/monster_v2"
+            monster_path = "/sdf/data/rubin/shared/the_monster/sharded_refcats/monster_v3"
         else:
             monster_path = self.monster_path_inp
         # Output the finished catalog for the shard:
