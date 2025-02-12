@@ -1,3 +1,5 @@
+# This is the Null transform since the Monster is in 
+# SDSS-bandpasses, via SLR, internally for u-band
 flux_offset: 0.0
 nodes:
 - 0.0
@@ -10,10 +12,10 @@ nodes:
 - 2.7222222222222223
 - 3.111111111111111
 - 3.5
-source_color_field_1: psfMag_g_flux
-source_color_field_2: psfMag_r_flux
-source_field: psfMag_u_flux
-source_survey: SDSS
+source_color_field_1: monster_DES_g_flux
+source_color_field_2: monster_DES_r_flux
+source_field: monster_SDSS_u_flux
+source_survey: Monster
 spline_values:
 - 1.0
 - 1.0

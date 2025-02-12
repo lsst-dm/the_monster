@@ -1,3 +1,5 @@
+# This is the Null transform since the Monster is in 
+# DES-bandpasses internally (griz)
 flux_offset: 0.0
 nodes:
 - 0.0
@@ -10,10 +12,10 @@ nodes:
 - 2.7222222222222223
 - 3.111111111111111
 - 3.5
-source_color_field_1: psfMag_g_flux
-source_color_field_2: psfMag_r_flux
-source_field: psfMag_u_flux
-source_survey: SDSS
+source_color_field_1: MAG_STD_G_flux
+source_color_field_2: MAG_STD_I_flux
+source_field: MAG_STD_I_flux
+source_survey: Monster
 spline_values:
 - 1.0
 - 1.0
@@ -25,4 +27,4 @@ spline_values:
 - 1.0
 - 1.0
 - 1.0
-target_survey: SDSS
+target_survey: DES

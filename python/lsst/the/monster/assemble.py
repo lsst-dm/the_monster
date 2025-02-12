@@ -93,6 +93,7 @@ class AssembleMonsterRefcat:
             self.uband_ref_info = uband_ref_class()
             self.uband_slr_info = uband_slr_class()
             self.offset_file = self.uband_slr_info.uband_offset_file(self.uband_ref_info.name)
+            print("u-band offsets will be applied from ", self.offset_file)
             self.offset_applicator = UBandOffsetMapApplicator(self.offset_file)
         self.validate()
 
@@ -195,8 +196,8 @@ class AssembleMonsterRefcat:
             # for each band do transformations skip u band
             for target_system_name, band in target_systems:
                 if band in bands:
-                    # Transform from the DES to the target system:
-                    colorterm_file_string = 'DES_to_'+str(target_system_name)+'_band'
+                    # Transform from the internal system to the target system:
+                    colorterm_file_string = 'Monster_to_'+str(target_system_name)+'_band'
                     colorterm_spline = self.get_colorterm_spline(colorterm_file_string, band)
                     # apply colorterms to transform to target system mag
                     band_1, band_2 = cat_info.get_color_bands(band)
@@ -290,17 +291,11 @@ class AssembleMonsterRefcat:
 
             for target_system_name, band in target_systems_u_transform:
                 # we take our SDSS_u flux and transform to target system
-                colorterm_file_string = 'SDSS_to_'+str(target_system_name)+'_band'
+                colorterm_file_string = 'Monster_to_'+str(target_system_name)+'_band'
                 colorterm_spline = self.get_colorterm_spline(colorterm_file_string, band)
                 flux_col = f"monster_{target_system_name}_{band}_flux"
-                # SDSS_to_SDSS_band_u source_color_field_1 = psfMag_g_flux
-                # should we change to just g? so we can use
-                # colorterm_spline.source_color_field_1 below
-                if colorterm_spline.source_color_field_1 == 'psfMag_g_flux':
-                    colorterm_spline.source_color_field_1 = 'g'
-                    colorterm_spline.source_color_field_2 = 'r'
-                flux_col_1 = f'monster_DES_{colorterm_spline.source_color_field_1}_flux'
-                flux_col_2 = f'monster_DES_{colorterm_spline.source_color_field_2}_flux'
+                flux_col_1 = colorterm_spline.source_color_field_1
+                flux_col_2 = colorterm_spline.source_color_field_2
                 if self.testing_mode:
                     flux_col = flux_col.replace("monster_DES", "monster_TestDES")
                     flux_col_1 = flux_col_1.replace("monster_DES", "monster_TestDES")
@@ -359,15 +354,15 @@ class AssembleMonsterRefcat:
                                                          cat_stars['GaiaDR3_id'])
                     # we match with monster to get g and r
                     # and use u band from cat_info
-                    colorterm_file_string = 'SDSS_to_'+str(target_system_name)+'_band'
+                    colorterm_file_string = 'Monster_to_'+str(target_system_name)+'_band'
                     colorterm_spline = self.get_colorterm_spline(colorterm_file_string, band)
                     if colorterm_spline.source_color_field_1 == 'psfMag_g_flux':
                         colorterm_spline.source_color_field_1 = 'g'
                         colorterm_spline.source_color_field_2 = 'r'
                     # apply colorterms to transform to target system mag
 
-                    flux_col_1 = f'monster_DES_{colorterm_spline.source_color_field_1}_flux'
-                    flux_col_2 = f'monster_DES_{colorterm_spline.source_color_field_2}_flux'
+                    flux_col_1 = colorterm_spline.source_color_field_1
+                    flux_col_2 = colorterm_spline.source_color_field_2
                     if self.testing_mode:
                         flux_col_1 = flux_col_1.replace("monster_DES", "monster_TestDES")
                         flux_col_2 = flux_col_1.replace("monster_DES", "monster_TestDES")
@@ -390,7 +385,7 @@ class AssembleMonsterRefcat:
                     gaia_stars_all[flux_col.replace('flux', 'source_flag')][idx1[flag]] = cat_info.flag
 
         if self.monster_path_inp is None:
-            monster_path = "/sdf/data/rubin/shared/the_monster/sharded_refcats/monster_v2"
+            monster_path = "/sdf/data/rubin/shared/the_monster/sharded_refcats/monster_v3"
         else:
             monster_path = self.monster_path_inp
         # Output the finished catalog for the shard:
@@ -447,7 +442,7 @@ class AssembleMonsterRefcat:
 
         return colorterm_spline
 
-    def apply_u_band_offsets(self, gaia_stars_all, slr_model_flux, slr_model_flux_err):
+    def apply_u_band_offsets(self, gaia_stars_all, slr_model_flux, slr_model_flux_err, verbose=False):
         """
         Apply u-band offsets to the model fluxes.
 
@@ -471,7 +466,8 @@ class AssembleMonsterRefcat:
         adjusted_flux_err : `numpy.ndarray`
             The model flux error values after applying the offsets.
         """
-        print("Applying offsets from ", self.offset_file)
+        if verbose:
+            print("Applying offsets from ", self.offset_file)
         offset_applicator = self.offset_applicator
         offsets = offset_applicator.compute_offsets(
             gaia_stars_all["coord_ra"],
