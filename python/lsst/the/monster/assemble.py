@@ -294,12 +294,6 @@ class AssembleMonsterRefcat:
                 colorterm_file_string = 'Monster_to_'+str(target_system_name)+'_band'
                 colorterm_spline = self.get_colorterm_spline(colorterm_file_string, band)
                 flux_col = f"monster_{target_system_name}_{band}_flux"
-                # SDSS_to_SDSS_band_u source_color_field_1 = psfMag_g_flux
-                # should we change to just g? so we can use
-                # colorterm_spline.source_color_field_1 below
-                if colorterm_spline.source_color_field_1 == 'psfMag_g_flux':
-                    colorterm_spline.source_color_field_1 = 'g'
-                    colorterm_spline.source_color_field_2 = 'r'
                 flux_col_1 = colorterm_spline.source_color_field_1
                 flux_col_2 = colorterm_spline.source_color_field_2
                 if self.testing_mode:
