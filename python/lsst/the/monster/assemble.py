@@ -350,6 +350,9 @@ class AssembleMonsterRefcat:
                     orig_flux_err = cat_stars[cat_info.get_transformed_flux_field(band)+'Err']
                     # Match the transformed catalog to Gaia.
                     # Since we need g and r from monster
+                    if (len(cat_stars) == 0):
+                        print(f"no valid stars in u-band for {htmid} ")
+                        continue
                     idx1, idx2 = esutil.numpy_util.match(gaia_stars_all['id'],
                                                          cat_stars['GaiaDR3_id'])
                     # we match with monster to get g and r
@@ -468,11 +471,12 @@ class AssembleMonsterRefcat:
         """
         if verbose:
             print("Applying offsets from ", self.offset_file)
-        offset_applicator = self.offset_applicator
-        offsets = offset_applicator.compute_offsets(
-            gaia_stars_all["coord_ra"],
-            gaia_stars_all["coord_dec"],
-        )
-        slr_model_flux *= offsets
-        slr_model_flux_err *= offsets
+        if len(slr_model_flux) > 0:
+            offset_applicator = self.offset_applicator
+            offsets = offset_applicator.compute_offsets(
+                gaia_stars_all["coord_ra"],
+                gaia_stars_all["coord_dec"],
+            )
+            slr_model_flux *= offsets
+            slr_model_flux_err *= offsets
         return slr_model_flux, slr_model_flux_err
